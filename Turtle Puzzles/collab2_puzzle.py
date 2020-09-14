@@ -1,8 +1,4 @@
-#Haipei Bie (hbie)
-#Katarina Hansen (kghansen)
-#Yuqiao Hu (yuqiaohu)
 
-#
 import turtle
 import math
 
