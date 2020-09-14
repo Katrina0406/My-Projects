@@ -1,8 +1,3 @@
-######### team members ######### 
-#    Yinan Wu      id: yinanwu
-#    Yuqiao Hu     id: yuqiaohu
-#    Xiangyu Wang  id: xw4
-################################
 ###Turtle Puzzle 3
 
 
