@@ -1,4 +1,9 @@
 
+'''
+Created by Yuqiao Hu and Yinan Wu
+'''
+
+# import from CMU lecture material
 from cmu_112_graphics import *
 import time
 
