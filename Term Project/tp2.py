@@ -1,5 +1,6 @@
 # cited from http://www.cs.cmu.edu/~112/index.html
 from cmu_112_graphics import *
+import numpy as np
 
 def almostEqual(d1, d2, epsilon=10**-7):
     # note: use math.isclose() outside 15-112 with Python version 3.5 or later
@@ -13,29 +14,42 @@ class MyApp(App):
 		self.splash = True
 		self.dash = False
 		self.load = None
-		self.buttonCam = False
 		self.messages = ''
 		self.saveMessage = False
 
 		MyApp.drawParas(self)
 		MyApp.buttonParas(self)
 		MyApp.colorParas(self)
+		MyApp.cameraParas(self)
 
 		self.img1 = self.loadImage('dash.jpeg')
 		self.img1 = self.scaleImage(self.img1, 2.2)
 
+		self.img2 = self.loadImage('shot.jpg')
+		self.img2 = self.scaleImage(self.img2, 0.5)
+
 		# textbox parameters
 		self.tx1, self.ty1, self.tx2, self.ty2 = self.width/2-100, self.height/2-330, self.width/2+600, self.height/2+270
 
+	def cameraParas(self):
+		self.marginH, self.marginW = 100, 80
+		self.snap = None
+		self.contours = None
+		self.camRangeX, self.camRangeY = 100, 80
+		self.camFixed = False
+
 	def drawParas(self):
 		self.drx1, self.dry1, self.drx2, self.dry2 = 35, 100, 850, 650
-		self.drSize = 5
+		self.drSize = 4
+		self.pensizes = []
 		self.drColor = 'black'
 		self.pencolors = []
 		self.draw = False
 		self.drawLine = []
 		self.trackLine = -1
 		self.saveDraw = False
+		self.scrollX = (595+685)/2
+		self.scrollY = self.height-43
 
 	def buttonParas(self):
 		# splash button parameters
@@ -48,6 +62,8 @@ class MyApp(App):
 		self.lx1, self.ly1, self.lx2, self.ly2 = 30, self.height-90, 150, self.height-30
 		# bottom-right button
 		self.rx3, self.ry3, self.rx4, self.ry4 = self.width-150, self.height-90, self.width-30, self.height-30
+		# bottom-middle button
+		self.mx1, self.my1, self.mx2, self.my2 = self.width/2-60, self.height-90, self.width/2+60, self.height-30
 
 	def colorParas(self):
 		# firebrick1, IndianRed1, salmon1, chocolate1, gold, yellow2, khaki1, antique white,  green2, spring green, pale green, snow
@@ -96,7 +112,40 @@ class MyApp(App):
 			self.saveSnapshot()
 
 	def mouseDragged(self, event):
-		MyApp.drawPen(self, event.x, event.y)
+		if self.draw:
+			MyApp.drawPen(self, event.x, event.y)
+			MyApp.penSize(self, event.x, event.y)
+		elif self.cameraOn:
+			MyApp.adjustSnap(self, event.x, event.y)
+
+	def adjustSnap(self, x, y):
+		if (self.camRangeX-90) <= x <= (self.camRangeX+90):
+			if self.marginW+5 <= x <= (self.width/2-100):
+				self.camRangeX = x
+		elif ((self.width-self.camRangeX-90) <= x <= (self.width-self.camRangeX+90)):
+			if (self.width/2+100) <= x <= (self.width-self.marginW-5):
+				self.camRangeX = self.width-x
+		elif (self.camRangeY-90) <= y <= (self.camRangeY+90):
+			if self.marginH-15 <= y <= (self.height/2-80):
+				self.camRangeY = y
+		elif ((self.height-self.camRangeY-90) <= y <= (self.height-self.camRangeY+90)):
+			if (self.height/2+80) <= y <= (self.height-self.marginH+15):
+				self.camRangeY = self.height-y
+
+	def dealSnap(self):
+		# gray = cv2.cvtColor(np.float32(self.snap), cv2.COLOR_BGR2GRAY)
+		gray = cv2.cvtColor(np.float32(self.img2), cv2.COLOR_BGR2GRAY)
+		ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)
+		# make the contour more clear
+		contours, hierarchy = cv2.findContours(np.uint8(thresh), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+		self.contours = contours
+
+	def penSize(self, x, y):
+		if not (self.scrollY-20) <= y <= (self.scrollY+20): return
+		if (x-10) < 590 or (x+10) > 690: return
+		midX, dis = (595+685)/2, 685-595
+		self.drSize = ((x-midX)/dis) * 6 + 4
+		self.scrollX = x
 
 	def drawPen(self, x, y):
 		if not (self.drx1+8) <= x <= (self.drx2-8): return
@@ -111,6 +160,7 @@ class MyApp(App):
 				self.drawLine[self.trackLine].append((xi, yi))
 				xi, yi = xi+xr, yi+yr
 				self.pencolors.append(self.drColor)
+				self.pensizes.append(self.drSize)
 		else:
 			self.drawLine[self.trackLine].append((x, y))
 
@@ -119,11 +169,14 @@ class MyApp(App):
 			self.cameraFired()
 
 	def getSnapshot(self):
-		x1, y1 = 80, 100
+		if self.camFixed:
+			rW, rH = self.marginW*2+20, self.marginH*2.1
+		else:
+			rW, rH = self.camRangeX*2-10, self.camRangeY*2.1+42
 		self._showRootWindow()
 		x0 = self._root.winfo_rootx() + self._canvas.winfo_x()
 		y0 = self._root.winfo_rooty() + self._canvas.winfo_y()
-		result = ImageGrabber.grab((x0+x1,y0+y1,self.width-x1, self.height-y1))
+		result = ImageGrabber.grab((x0+rW,y0+40+rH,self.width*2-rW, self.height*2.1+20-rH))
 		return result
 
 	def keyReleased(self, event):
@@ -136,11 +189,18 @@ class MyApp(App):
 		else:
 			self.messages += event.key
 
+	def drawSnap(self, canvas):
+		if self.contours == None:  return
+		for i in range(1, len(self.contours)):
+			cont = self.contours[i]
+			for cordi in cont:
+				x, y = cordi[0][0]+(self.drx1+self.drx2)*0.24/2, cordi[0][1]+(self.dry1+self.dry2)*0.5/2
+				canvas.create_oval(x-2, y-2, x+2, y+2, fill='black', width=0)
+
 	def mousePressed(self, event):
 		if self.splash:
 			# camera page
 			if self.bx1 <= event.x <= self.bx2 and self.by1 <= event.y <= self.by2:
-				self.buttonCam = True
 				self.splash = False
 				self.cameraOn = True
 			# upload
@@ -161,6 +221,20 @@ class MyApp(App):
 			if self.lx1 <= event.x <= self.lx2 and self.ly1 <= event.y <= self.ly2:
 				self.cameraOn = False
 				self.splash = True
+				MyApp.cameraParas(self)
+			# fix scan pic
+			elif self.mx1 <= event.x <= self.mx2 and self.my1 <= event.y <= self.my2:
+				self.camFixed = True
+				self.snap = self.getSnapshot()
+				self.snap = self.scaleImage(self.snap, 0.5)
+			# snapshot convert
+			elif self.rx3 <= event.x <= self.rx4 and self.ry3 <= event.y <= self.ry4:
+				self.camFixed = False
+				self.snap = self.getSnapshot()
+				self.snap = self.scaleImage(self.snap, 0.5)
+				MyApp.dealSnap(self)
+				self.cameraOn = False
+				self.draw = True
 		elif self.dash:
 			# edit back
 			if self.lx1 <= event.x <= self.lx2 and self.ly1 <= event.y <= self.ly2:
@@ -175,14 +249,13 @@ class MyApp(App):
 				self.drawLine.append([])
 				self.trackLine += 1
 				self.pencolors.append(self.drColor)
+				self.pensizes.append(self.drSize)
 			# draw back
 			elif self.lx1 <= event.x <= self.lx2 and self.ly1 <= event.y <= self.ly2:
 				self.draw = False
 				self.splash = True
 				if not self.saveDraw:
-					self.drawLine = []
-					self.trackLine = -1
-					self.pencolors = []
+					MyApp.drawParas(self)
 			# draw save
 			elif self.rx3 <= event.x <= self.rx4 and self.ry3 <= event.y <= self.ry4:
 				self.saveDraw = True
@@ -265,15 +338,22 @@ class MyApp(App):
 		canvas.create_text((self.bx7+self.bx8)/2, (self.by7+self.by8)/2, text='Draw', font='Baloo 38', fill='steel blue')
 
 	def drawCameraPage(self, canvas):
-		if not self.buttonCam:
-			return
-		marginH, marginW = 100,80
-		canvas.create_rectangle(0, 0, self.width, marginH, fill='SkyBlue1', width=0)
-		canvas.create_rectangle(0, self.height, self.width, self.height-marginH, fill='SkyBlue1', width=0)
-		canvas.create_rectangle(0, 0, marginW, self.height, fill='SkyBlue1', width=0)
-		canvas.create_rectangle(self.width-marginW, 0, self.width, self.height, fill='SkyBlue1', width=0)
+		canvas.create_rectangle(0, 0, self.width, self.marginH, fill='SkyBlue1', width=0)
+		canvas.create_rectangle(0, self.height, self.width, self.height-self.marginH, fill='SkyBlue1', width=0)
+		canvas.create_rectangle(0, 0, self.marginW, self.height, fill='SkyBlue1', width=0)
+		canvas.create_rectangle(self.width-self.marginW, 0, self.width, self.height, fill='SkyBlue1', width=0)
+		# draw snapshot
+		if self.camFixed:
+			canvas.create_rectangle(0, 0, self.width, self.height-self.marginH, fill='SkyBlue1', width=0)
+			canvas.create_image(self.width/2, self.height/2, image=ImageTk.PhotoImage(self.snap))
+		# snapshot range
+		canvas.create_rectangle(self.camRangeX-15, self.camRangeY+15, self.width-self.camRangeX+15, self.height-self.camRangeY-15, outline='lightGreen', width=10)
 		canvas.create_rectangle(self.lx1, self.ly1, self.lx2, self.ly2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.lx1+self.lx2)/2, (self.ly1+self.ly2)/2, text='Back', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.rx3, self.ry3, self.rx4, self.ry4, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.rx3+self.rx4)/2, (self.ry3+self.ry4)/2, text='Convert', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.mx1, self.my1, self.mx2, self.my2, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.mx1+self.mx2)/2, (self.ry3+self.ry4)/2, text='OK', font='Baloo 28', fill='steel blue')
 
 	# def drawText(self):
 	# 	canvas.create_text(self.tx1+20, self.ty1+20, text=self.messages, font='Arial 18', anchor='nw')
@@ -298,12 +378,20 @@ class MyApp(App):
 		canvas.create_text(self.width-230, 50, text='Drawing Board', font='Baloo 55', fill='steel blue')
 		canvas.create_rectangle(self.rx3, self.ry3, self.rx4, self.ry4, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.rx3+self.rx4)/2, (self.ry3+self.ry4)/2, text='Save', font='Baloo 28', fill='steel blue')
+		# adjust pensize line
+		canvas.create_rectangle(590, self.height-45, 690, self.height-40, fill='steel blue', width=0)
+		canvas.create_rectangle(590, self.height-53, 595, self.height-32, fill='steel blue', width=0)
+		canvas.create_rectangle(685, self.height-53, 690, self.height-32,  fill='steel blue', width=0)
+		pcx, pcy = (595+685)/2, self.height-75
+		canvas.create_oval(pcx-self.drSize, pcy-self.drSize, pcx+self.drSize, pcy+self.drSize, fill=self.drColor, width=0)
+		canvas.create_rectangle(self.scrollX-7, self.scrollY-7, self.scrollX+7, self.scrollY+7, fill='steel blue', width=3, outline='lavender')
 		
 		i = 0
 		if self.drawLine != []:
 			for line in self.drawLine:
 				for x, y in line:
-					canvas.create_oval(x-self.drSize, y-self.drSize, x+self.drSize, y+self.drSize, fill=self.pencolors[i], width=0)
+					size = self.pensizes[i]
+					canvas.create_oval(x-size, y-size, x+size, y+size, fill=self.pencolors[i], width=0)
 					i += 1
 		
 	def redrawAll(self, canvas):
@@ -315,6 +403,7 @@ class MyApp(App):
 			MyApp.drawDashboard(self, canvas)
 		elif self.draw:
 			MyApp.drawDrawPage(self, canvas)
+			MyApp.drawSnap(self, canvas)
 			MyApp.drawColors(self, canvas)
 
 if __name__ == "__main__":
