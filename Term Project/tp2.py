@@ -50,6 +50,10 @@ class MyApp(App):
 		self.saveDraw = False
 		self.scrollX = (595+685)/2
 		self.scrollY = self.height-43
+		self.erase = False
+		self.erases = []
+		self.retrieve = False
+		self.retrieves = set()
 
 	def buttonParas(self):
 		# splash button parameters
@@ -115,6 +119,8 @@ class MyApp(App):
 		if self.draw:
 			MyApp.drawPen(self, event.x, event.y)
 			MyApp.penSize(self, event.x, event.y)
+			MyApp.eraseSnap(self, event.x, event.y)
+			MyApp.retrieveLine(self, event.x, event.y)
 		elif self.cameraOn:
 			MyApp.adjustSnap(self, event.x, event.y)
 
@@ -133,11 +139,15 @@ class MyApp(App):
 				self.camRangeY = self.height-y
 
 	def dealSnap(self):
-		# gray = cv2.cvtColor(np.float32(self.snap), cv2.COLOR_BGR2GRAY)
-		gray = cv2.cvtColor(np.float32(self.img2), cv2.COLOR_BGR2GRAY)
-		ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)
+		gray = cv2.cvtColor(np.float32(self.snap), cv2.COLOR_BGR2GRAY)
+		# ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)
+		thresh = cv2.adaptiveThreshold(np.uint8(gray), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 145, 15)
+		kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2))
 		# make the contour more clear
-		contours, hierarchy = cv2.findContours(np.uint8(thresh), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+		erode = cv2.erode(thresh, kernel)
+		dilate = cv2.dilate(erode, kernel, iterations=1)
+
+		contours, hierarchy = cv2.findContours(np.uint8(dilate), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 		self.contours = contours
 
 	def penSize(self, x, y):
@@ -150,6 +160,7 @@ class MyApp(App):
 	def drawPen(self, x, y):
 		if not (self.drx1+8) <= x <= (self.drx2-8): return
 		if not (self.dry1+8) <= y <= (self.dry2-8): return
+		if self.retrieve: return
 		# fill up all the gaps between the last dot and the current dot
 		if self.drawLine[self.trackLine] != []:
 			x0, y0 = self.drawLine[self.trackLine][-1]
@@ -167,6 +178,14 @@ class MyApp(App):
 	def timerFired(self):
 		if self.cameraOn:
 			self.cameraFired()
+
+	def eraseSnap(self, x, y):
+		if not self.erase: return
+		self.erases += [(x, y)]
+
+	def retrieveLine(self, x, y):
+		if not self.retrieve: return
+		self.retrieves.add((x, y))
 
 	def getSnapshot(self):
 		if self.camFixed:
@@ -195,7 +214,8 @@ class MyApp(App):
 			cont = self.contours[i]
 			for cordi in cont:
 				x, y = cordi[0][0]+(self.drx1+self.drx2)*0.24/2, cordi[0][1]+(self.dry1+self.dry2)*0.5/2
-				canvas.create_oval(x-2, y-2, x+2, y+2, fill='black', width=0)
+				if not (x, y) in self.erases:
+					canvas.create_oval(x-2, y-2, x+2, y+2, fill='black', width=0)
 
 	def mousePressed(self, event):
 		if self.splash:
@@ -259,6 +279,11 @@ class MyApp(App):
 			# draw save
 			elif self.rx3 <= event.x <= self.rx4 and self.ry3 <= event.y <= self.ry4:
 				self.saveDraw = True
+			elif (720 <= event.x <= 750 and self.height-30 <= event.y <= self.height-20): 
+				self.erase = not self.erase
+			elif (720 <= event.x <= 750 and self.height-70 <= event.y <= self.height-60): 
+				self.retrieve = not self.retrieve
+				MyApp.retrieveLine(self, event.x, event.y)
 			else:
 				MyApp.drawColorCheck(self, event.x, event.y)
 
@@ -385,14 +410,25 @@ class MyApp(App):
 		pcx, pcy = (595+685)/2, self.height-75
 		canvas.create_oval(pcx-self.drSize, pcy-self.drSize, pcx+self.drSize, pcy+self.drSize, fill=self.drColor, width=0)
 		canvas.create_rectangle(self.scrollX-7, self.scrollY-7, self.scrollX+7, self.scrollY+7, fill='steel blue', width=3, outline='lavender')
-		
+		color1, color2 = 'white', 'yellow2'
+		if self.erase:
+			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color2, width=0)
+		if not self.erase:
+			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color1, width=0)
+		if self.retrieve:
+			canvas.create_rectangle(720, self.height-70, 750, self.height-60, fill=color2, width=0)
+		if not self.retrieve:
+			canvas.create_rectangle(720, self.height-70, 750, self.height-60, fill=color1, width=0)
+
 		i = 0
 		if self.drawLine != []:
 			for line in self.drawLine:
 				for x, y in line:
+					if (x, y) in self.retrieves: continue
 					size = self.pensizes[i]
 					canvas.create_oval(x-size, y-size, x+size, y+size, fill=self.pencolors[i], width=0)
 					i += 1
+
 		
 	def redrawAll(self, canvas):
 		if self.splash:
