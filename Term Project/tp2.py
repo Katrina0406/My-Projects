@@ -20,6 +20,7 @@ class MyApp(App):
 		MyApp.colorParas(self)
 		MyApp.cameraParas(self)
 
+		#cited from https://www.google.com/search?source=univ&tbm=isch&q=blue+background&sa=X&ved=2ahUKEwiQ3aWbk7ftAhXWbCsKHdBJBN0QjJkEegQIAhAB
 		self.img1 = self.loadImage('dash.jpeg')
 		self.img1 = self.scaleImage(self.img1, 2.2)
 
@@ -77,11 +78,13 @@ class MyApp(App):
 		self.mx1, self.my1, self.mx2, self.my2 = self.width/2-60, self.height-90, self.width/2+60, self.height-30
 
 		# draw page buttons
-		self.dpx1, self.dpy1, self.dpx2, self.dpy2 = self.width-150, 100, self.width-30, 160
-		self.dpx3, self.dpy3, self.dpx4, self.dpy4 = self.width-150, 190, self.width-30, 250
+		self.dpx1, self.dpy1, self.dpx2, self.dpy2 = self.width-150, 120, self.width-30, 180
+		self.dpx3, self.dpy3, self.dpx4, self.dpy4 = self.width-150, 200, self.width-30, 260
 		self.dpx5, self.dpy5, self.dpx6, self.dpy6 = self.width-150, 280, self.width-30, 340
-		self.dpx7, self.dpy7, self.dpx8, self.dpy8 = self.width-150, 370, self.width-30, 430
-		self.dpx9, self.dpy9, self.dpx10, self.dpy10 = self.width-150, 460, self.width-30, 520
+		self.dpx7, self.dpy7, self.dpx8, self.dpy8 = self.width-150, 360, self.width-30, 420
+		self.dpx9, self.dpy9, self.dpx10, self.dpy10 = self.width-150, 440, self.width-30, 500
+		self.dpx11, self.dpy11, self.dpx12, self.dpy12 = self.width-150, 520, self.width-30, 580
+		self.dpx13, self.dpy13, self.dpx14, self.dpy14 = self.width-150, 600, self.width-30, 660
 
 	def colorParas(self):
 		# firebrick1, IndianRed1, salmon1, chocolate1, gold, yellow2, khaki1, antique white,  green2, spring green, pale green, snow
@@ -560,9 +563,7 @@ class MyApp(App):
 
 	def drawSplashPage(self, canvas):
 		canvas.create_image(self.width/2, self.height/2, image=ImageTk.PhotoImage(self.img1))
-		# canvas.create_rectangle(0, 0, self.width, self.height, fill='SkyBlue1')
 		canvas.create_text(self.width/2, self.height/2-100, text='Drawing Black Box', font='Baloo 98', fill='steel blue')
-
 		canvas.create_rectangle(self.bx1, self.by1, self.bx2, self.by2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.bx1+self.bx2)/2, (self.by1+self.by2)/2, text='Scan', font='Baloo 38', fill='steel blue')
 		canvas.create_rectangle(self.bx3, self.by3, self.bx4, self.by4, fill='lavender', width=8, outline='steel blue')
@@ -619,6 +620,7 @@ class MyApp(App):
 		canvas.create_rectangle(self.scrollX-7, self.scrollY-7, self.scrollX+7, self.scrollY+7, fill='steel blue', width=3, outline='lavender')
 		color1, color2 = 'white', 'yellow2'
 		# buttons on the right side
+		canvas.create_rectangle(self.dpx1-40, self.dpy1-25, self.dpx14+5, self.dpy1-20, fill='lavender', width=0)
 		canvas.create_rectangle(self.dpx1, self.dpy1, self.dpx2, self.dpy2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.dpx1+self.dpx2)/2, (self.dpy1+self.dpy2)/2, text='Move', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.dpx3, self.dpy3, self.dpx4, self.dpy4, fill='lavender', width=8, outline='steel blue')
@@ -629,6 +631,11 @@ class MyApp(App):
 		canvas.create_text((self.dpx7+self.dpx8)/2, (self.dpy7+self.dpy8)/2, text='FlipH', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.dpx9, self.dpy9, self.dpx10, self.dpy10, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.dpx9+self.dpx10)/2, (self.dpy9+self.dpy10)/2, text='FlipV', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.dpx11, self.dpy11, self.dpx12, self.dpy12, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.dpx11+self.dpx12)/2, (self.dpy11+self.dpy12)/2, text='BGColor', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.dpx13, self.dpy13, self.dpx14, self.dpy14, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.dpx13+self.dpx14)/2, (self.dpy13+self.dpy14)/2, text='Output', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.dpx13-40, self.dpy14+20, self.dpx14+5, self.dpy14+25, fill='lavender', width=0)
 
 		if self.erase:
 			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color2, width=0)
