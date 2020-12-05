@@ -1,6 +1,7 @@
 # cited from http://www.cs.cmu.edu/~112/index.html
 from cmu_112_graphics import *
 import numpy as np
+import math
 
 # cited from http://www.cs.cmu.edu/~112/index.html
 def almostEqual(d1, d2, epsilon=10**-7):
@@ -13,9 +14,6 @@ class MyApp(App):
 		self.cameraOn = False
 		self.splash = True
 		self.dash = False
-		self.load = None
-		self.messages = ''
-		self.saveMessage = False
 
 		MyApp.drawParas(self)
 		MyApp.buttonParas(self)
@@ -24,9 +22,6 @@ class MyApp(App):
 
 		self.img1 = self.loadImage('dash.jpeg')
 		self.img1 = self.scaleImage(self.img1, 2.2)
-
-		self.img2 = self.loadImage('shot.jpg')
-		self.img2 = self.scaleImage(self.img2, 0.5)
 
 		# textbox parameters
 		self.tx1, self.ty1, self.tx2, self.ty2 = self.width/2-100, self.height/2-330, self.width/2+600, self.height/2+270
@@ -50,16 +45,22 @@ class MyApp(App):
 		self.saveDraw = False
 		self.scrollX = (595+685)/2
 		self.scrollY = self.height-43
+		self.bgcolor = 'lavender'
 		self.erase = False
-		self.erases = []
+		self.erases = set()
+		self.eraseR = 5
 		self.retrieve = False
-		self.retrieves = set()
 		# buttons
 		self.moveMode = False
 		self.xL, self.yL, self.xR, self.yR = -1, -1, -1, -1
 		self.disMoveX, self.disMoveY = 0, 0
 		self.resizeMode = False
 		self.probX, self.probY = 1, 1
+		self.resizeX = self.resizeY = 0
+		self.rotateMode = False
+		self.angle = 0
+		self.flipH = False
+		self.flipV = False
 
 	def buttonParas(self):
 		# splash button parameters
@@ -78,6 +79,9 @@ class MyApp(App):
 		# draw page buttons
 		self.dpx1, self.dpy1, self.dpx2, self.dpy2 = self.width-150, 100, self.width-30, 160
 		self.dpx3, self.dpy3, self.dpx4, self.dpy4 = self.width-150, 190, self.width-30, 250
+		self.dpx5, self.dpy5, self.dpx6, self.dpy6 = self.width-150, 280, self.width-30, 340
+		self.dpx7, self.dpy7, self.dpx8, self.dpy8 = self.width-150, 370, self.width-30, 430
+		self.dpx9, self.dpy9, self.dpx10, self.dpy10 = self.width-150, 460, self.width-30, 520
 
 	def colorParas(self):
 		# firebrick1, IndianRed1, salmon1, chocolate1, gold, yellow2, khaki1, antique white,  green2, spring green, pale green, snow
@@ -118,38 +122,64 @@ class MyApp(App):
 		canvas.create_rectangle(self.cxB, self.csl, self.cxB+30, self.csl+30, fill='black', width=0)
 
 	def keyPressed(self, event):
-		cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
-		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
-		disX, disY = (x3+x4)/2, (y3+y4)/2
 		if event.key == 'q':
 			self.quit()
 		elif event.key == 'a':
 			self.getSnapshot()
 		elif event.key == 's':
 			self.saveSnapshot()
-		elif self.moveMode:
-			if event.key == 'Up':
-				if y3 >= self.dry1:
-					self.disMoveY -= 10
-			elif event.key == 'Down':
-				if y4 <= self.dry2:
-					self.disMoveY += 10
-			elif event.key == 'Left':
-				if x3 >= self.drx1:
-					self.disMoveX -= 10
-			elif event.key == 'Right':
-				if x4 <= self.drx2:
-					self.disMoveX += 10
-		elif self.resizeMode:
-			if event.key == 'Up':
-
+		elif self.moveMode or self.resizeMode or self.rotateMode:
+			cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
+			x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
+			disX, disY = (x3+x4)/2, (y3+y4)/2
+			if self.moveMode:
+				if event.key == 'Up':
+					if y3 >= self.dry1:
+						self.disMoveY -= 10
+				elif event.key == 'Down':
+					if y4 <= self.dry2:
+						self.disMoveY += 10
+				elif event.key == 'Left':
+					if x3 >= self.drx1:
+						self.disMoveX -= 10
+				elif event.key == 'Right':
+					if x4 <= self.drx2:
+						self.disMoveX += 10
+			elif self.resizeMode:
+				if event.key == '=':
+					self.resizeX += 10
+					self.probX = self.probY = (self.resizeX+disX) / disX
+				elif event.key == '-':
+					self.resizeX -= 10
+					self.probX = self.probY = (self.resizeX+disX) / disX
+				elif event.key == 'Up':
+					self.resizeY += 10
+					self.probY = (self.resizeY+disY) / disY
+				elif event.key == 'Down':
+					self.resizeY -= 10
+					self.probY = (self.resizeY+disY) / disY
+				elif event.key == 'Left':
+					self.resizeX -= 10
+					self.probX = (self.resizeX+disX) / disX
+				elif event.key == 'Right':
+					self.resizeX += 10
+					self.probX = (self.resizeX+disX) / disX
+			else:
+				if event.key == 'Left':
+					self.angle -= 10
+				elif event.key == 'Right':
+					self.angle += 10
+		elif self.retrieve:
+			if event.key == 'Up' and self.eraseR <= 20:
+				self.eraseR += 3
+			elif event.key == 'Down' and self.eraseR >=4 :
+				self.eraseR -= 3
 
 	def mouseDragged(self, event):
 		if self.draw:
 			MyApp.drawPen(self, event.x, event.y)
 			MyApp.penSize(self, event.x, event.y)
 			MyApp.eraseSnap(self, event.x, event.y)
-			MyApp.retrieveLine(self, event.x, event.y)
 			MyApp.moveSnap(self, event.x, event.y)
 			MyApp.resizeSnap(self, event.x, event.y)
 		elif self.cameraOn:
@@ -192,7 +222,7 @@ class MyApp(App):
 	def drawPen(self, x, y):
 		if not (self.drx1+8) <= x <= (self.drx2-8): return
 		if not (self.dry1+8) <= y <= (self.dry2-8): return
-		if self.retrieve or self.moveMode or self.resizeMode: return
+		if (self.moveMode or self.resizeMode or self.erase or self.rotateMode): 	return
 		# fill up all the gaps between the last dot and the current dot
 		if self.drawLine[self.trackLine] != []:
 			x0, y0 = self.drawLine[self.trackLine][-1]
@@ -202,32 +232,18 @@ class MyApp(App):
 			while not almostEqual(xi, x):
 				self.drawLine[self.trackLine].append((xi, yi))
 				xi, yi = xi+xr, yi+yr
-				self.pencolors.append(self.drColor)
-				self.pensizes.append(self.drSize)
+				if self.retrieve:
+					self.pencolors.append(self.bgcolor)
+					self.pensizes.append(self.eraseR)
+				else:
+					self.pencolors.append(self.drColor)
+					self.pensizes.append(self.drSize)
 		else:
 			self.drawLine[self.trackLine].append((x, y))
 
 	def timerFired(self):
 		if self.cameraOn:
 			self.cameraFired()
-
-	def eraseSnap(self, x, y):
-		if not self.erase: return
-		self.erases += [(x, y)]
-
-	def retrieveLine(self, x, y):
-		if not self.retrieve: return
-		self.retrieves.add((x, y))
-		# i, j = 0, 0
-		# if self.drawLine != []:
-		# 	for line in self.drawLine:
-		# 		for x1, y1 in line:
-		# 			if x1 == x and y1 == y:
-		# 				self.drawLine[j].remove((x, y))
-		# 				self.pensizes.remove(i)
-		# 				self.pencolors.remove(i)
-		# 			i += 1
-		# 	j += 1
 
 	# cited from http://www.cs.cmu.edu/~112/index.html
 	def getSnapshot(self):
@@ -241,77 +257,125 @@ class MyApp(App):
 		result = ImageGrabber.grab((x0+rW,y0+40+rH,self.width*2-rW, self.height*2.1+20-rH))
 		return result
 
+	def eraseSnap(self, x, y):
+		if not self.erase: return
+		self.erases.add((x, y))
+		for i in range(1, len(self.contours)):
+			for cordi in self.contours[i]:
+				if (cordi == [[x, y]]).all():
+					self.contours[i] = np.delete(self.contours[i], [[x, y]])
+
 	def resizeSnap(self, x, y):
 		if not self.resizeMode: return
 		if not self.drx1 <= x <= self.drx2: return
 		if not self.dry1 <= y <= self.dry2: return
 		cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
 		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
+		disR = ((self.xR-self.xL)**2 + (self.yB-self.yT)**2)**0.5
+		theta3 = math.acos((x3-cx)/disR)
+		x3 = cx + disR * math.cos(theta3+self.angle*math.pi/180)
+		theta4 = math.acos((x4-cx)/disR)
+		x4 = cx + disR * math.cos(theta4+self.angle*math.pi/180)
+		theta5 = math.asin((y3-cy)/disR)
+		y3 = cy + disR * math.sin(theta5+self.angle*math.pi/180)
+		theta6 = math.asin((y4-cy)/disR)
+		y4 = cy + disR * math.sin(theta6+self.angle*math.pi/180)
 		disX, disY = (x3+x4)/2, (y3+y4)/2
 		# four corners
-		if (x3-30) <= x <= (x3+30) and (y3-30) <= y <= (y3+30):
-			moveX = x3 - x
-			moveY = y3 - y
+		if (x3-50) <= x <= (x3+50) and (y3-50) <= y <= (y3+50):
+			moveX = (x3 - x)
+			moveY = (y3 - y)
 			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
 			prob = max(probX, probY)
 			self.probX = self.probY = prob
-			return
-		if (x3-80) <= x <= (x3+80) and (y4-80) <= y <= (y4+80):
-			moveX = x3 - x
-			moveY = y - y4
+		elif (x3-50) <= x <= (x3+50) and (y4-50) <= y <= (y4+50):
+			moveX = (x3 - x)
+			moveY = (y - y4)
 			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
 			prob = max(probX, probY)
 			self.probX = self.probY = prob
-			return
-		if (x4-80) <= x <= (x4+80) and (y3-80) <= y <= (y3+80):
-			moveX = x - x4
-			moveY = y3 - y
+		elif (x4-50) <= x <= (x4+50) and (y3-50) <= y <= (y3+50):
+			moveX = (x - x4)
+			moveY = (y3 - y)
 			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
 			prob = max(probX, probY)
 			self.probX = self.probY = prob
-			return
-		if (x4-80) <= x <= (x4+80) and (y4-80) <= y <= (y4+80):
-			moveX = x - x4
-			moveY = y - y4
+		elif (x4-50) <= x <= (x4+50) and (y4-50) <= y <= (y4+50):
+			moveX = (x - x4)
+			moveY = (y - y4)
 			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
 			prob = max(probX, probY)
 			self.probX = self.probY = prob
-			return
 		# leftside x
-		if (x3-30) <= x <= (x3+30):
-			moveX = x3 - x
+		elif (x3-80) <= x < x3:
+			moveX = (x3 - x)
+			self.probX = (moveX+disX) / disX
+		elif (x3+5) < x <= (x3+80):
+			moveX = (x3+5 - x)
 			self.probX = (moveX+disX) / disX
 		# rightside x
-		if (x4-30) <= x <= (x4+30) :
-			moveX = x - x4
+		elif (x4-80) <= x < (x4-5) :
+			moveX = (x - (x4-5))
+			self.probX = (moveX+disX) / disX
+		elif x4 < x <= (x4+80) :
+			moveX = (x - x4)
 			self.probX = (moveX+disX) / disX
 		# upside y
-		if (y3-30) <= y <= (y3+30):
-			moveY = y3 - y
+		elif (y3-80) <= y < y3:
+			moveY = (y3 - y)
+			self.probY = (moveY+disY) / disY
+		elif (y3+5) < y <= (y3+80):
+			moveY = (y3+5 - y)
 			self.probY = (moveY+disY) / disY
 		# downside y
-		if (y4-30) <= y <= (y4+30):
-			moveY = y - y4
+		elif (y4-5-40) <= y < (y4-5):
+			moveY = (y - (y4-5))
+			self.probY = (moveY+disY) / disY
+		elif y4 < y <= (y4+40):
+			moveY = (y - y4)
 			self.probY = (moveY+disY) / disY
 
 	def drawSnap(self, canvas):
 		if self.contours == None:  return
 		cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
-		disX, disY = (self.xR-self.xL)/2, (self.yB-self.yT)/2
+		disR = ((self.xR-self.xL)**2 + (self.yB-self.yT)**2)**0.5
 		for i in range(1, len(self.contours)):
 			cont = self.contours[i]
 			for cordi in cont:
 				x, y = cordi[0][0]+(self.drx1+self.drx2)*0.24/2, cordi[0][1]+(self.dry1+self.dry2)*0.5/2
 				x = (x-cx)*self.probX+cx+self.disMoveX
-				x1, x2 = x-2*self.probX, x+2*self.probX
+				theta = math.acos((x-cx)/disR)
+				x = cx + disR * math.cos(theta+self.angle*math.pi/180)
 				y = (y-cy)*self.probY+cy+self.disMoveY
+				theta2 = math.asin((y-cy)/disR)
+				y = cy + disR * math.sin(theta2+self.angle*math.pi/180)
+				if self.flipH:
+					if x > cx:
+						x = x - (x-cx)*2
+					elif x < cx:
+						x = x + (cx-x)*2
+				elif self.flipV:
+					if y > cy:
+						y = y - (y-cy)*2
+					elif y < cy:
+						y = y + (cy-y)*2
+				x1, x2 = x-2*self.probX, x+2*self.probX
 				y1, y2 = y-2*self.probY, y+2*self.probY
-				if not (x, y) in self.erases:
+				if (x, y) not in self.erases:
 					canvas.create_oval(x1, y1, x2, y2, fill='black', width=0)
+		
+		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
+		theta3 = math.acos((x3-cx)/disR)
+		x3 = cx + disR * math.cos(theta3+self.angle*math.pi/180)
+		theta4 = math.acos((x4-cx)/disR)
+		x4 = cx + disR * math.cos(theta4+self.angle*math.pi/180)
+		theta5 = math.asin((y3-cy)/disR)
+		y3 = cy + disR * math.sin(theta5+self.angle*math.pi/180)
+		theta6 = math.asin((y4-cy)/disR)
+		y4 = cy + disR * math.sin(theta6+self.angle*math.pi/180)
 		if self.moveMode:
-			canvas.create_rectangle((self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY, outline='lightGreen', width=5)
+			canvas.create_rectangle(x3, y3, x4, y4, outline='lightGreen', width=5)
 		elif self.resizeMode:
-			x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
 			canvas.create_rectangle(x3, y3, x4, y4, outline='yellow2', width=5)
 			rx1, ry1, rx2, ry2 = x3, y3, x4, y3
 			rx3, ry3, rx4, ry4 = x3, y4, x4, y4
@@ -319,6 +383,15 @@ class MyApp(App):
 			canvas.create_oval(rx2-10, ry2-10, rx2+10, ry2+10, fill='lightGreen', width=0)
 			canvas.create_oval(rx3-10, ry3-10, rx3+10, ry3+10, fill='lightGreen', width=0)
 			canvas.create_oval(rx4-10, ry4-10, rx4+10, ry4+10, fill='lightGreen', width=0)
+		elif self.rotateMode:
+			canvas.create_rectangle(x3, y3, x4, y4, outline='MediumPurple2', width=5)
+			rx1, ry1, rx2, ry2 = x3, y3, x4, y3
+			rx3, ry3, rx4, ry4 = x3, y4, x4, y4
+			canvas.create_oval(rx1-10, ry1-10, rx1+10, ry1+10, fill='HotPink1', width=0)
+			canvas.create_oval(rx2-10, ry2-10, rx2+10, ry2+10, fill='HotPink1', width=0)
+			canvas.create_oval(rx3-10, ry3-10, rx3+10, ry3+10, fill='HotPink1', width=0)
+			canvas.create_oval(rx4-10, ry4-10, rx4+10, ry4+10, fill='HotPink1', width=0)
+
 
 	def findSnapRange(self):
 		if self.contours == None: return
@@ -401,13 +474,19 @@ class MyApp(App):
 				self.erase = not self.erase
 			elif (720 <= event.x <= 750 and self.height-70 <= event.y <= self.height-60): 
 				self.retrieve = not self.retrieve
-				MyApp.retrieveLine(self, event.x, event.y)
 			elif (self.dpx1 <= event.x <= self.dpx2 and self.dpy1 <= event.y <= self.dpy2):
 				self.moveMode = not self.moveMode
 			elif (self.dpx3 <= event.x <= self.dpx4 and self.dpy3 <= event.y <= self.dpy4):
 				self.resizeMode = not self.resizeMode
+			elif (self.dpx5 <= event.x <= self.dpx6 and self.dpy5 <= event.y <= self.dpy6):
+				self.rotateMode = not self.rotateMode
+			elif (self.dpx7 <= event.x <= self.dpx8 and self.dpy7 <= event.y <= self.dpy8):
+				self.flipH = not self.flipH
+			elif (self.dpx9 <= event.x <= self.dpx10 and self.dpy9 <= event.y <= self.dpy10):
+				self.flipV = not self.flipV
 			else:
 				MyApp.drawColorCheck(self, event.x, event.y)
+				MyApp.resizeSnap(self, event.x, event.y)
 
 	def moveSnap(self, x, y):
 		if not self.moveMode: return
@@ -479,11 +558,6 @@ class MyApp(App):
 		elif self.cxB <= x <= self.cxB+30 and self.csl <= y <= self.csl+30:
 			self.drColor = 'black'
 
-	def checkSave(self):
-		if not self.saveMessage:
-			self.load = None
-			self.messages = ''
-
 	def drawSplashPage(self, canvas):
 		canvas.create_image(self.width/2, self.height/2, image=ImageTk.PhotoImage(self.img1))
 		# canvas.create_rectangle(0, 0, self.width, self.height, fill='SkyBlue1')
@@ -549,6 +623,12 @@ class MyApp(App):
 		canvas.create_text((self.dpx1+self.dpx2)/2, (self.dpy1+self.dpy2)/2, text='Move', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.dpx3, self.dpy3, self.dpx4, self.dpy4, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.dpx3+self.dpx4)/2, (self.dpy3+self.dpy4)/2, text='Resize', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.dpx5, self.dpy5, self.dpx6, self.dpy6, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.dpx5+self.dpx6)/2, (self.dpy5+self.dpy6)/2, text='Rotate', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.dpx7, self.dpy7, self.dpx8, self.dpy8, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.dpx7+self.dpx8)/2, (self.dpy7+self.dpy8)/2, text='FlipH', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.dpx9, self.dpy9, self.dpx10, self.dpy10, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.dpx9+self.dpx10)/2, (self.dpy9+self.dpy10)/2, text='FlipV', font='Baloo 28', fill='steel blue')
 
 		if self.erase:
 			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color2, width=0)
@@ -559,15 +639,14 @@ class MyApp(App):
 		if not self.retrieve:
 			canvas.create_rectangle(720, self.height-70, 750, self.height-60, fill=color1, width=0)
 
+	def drawAllLines(self, canvas):
 		i = 0
 		if self.drawLine != []:
 			for line in self.drawLine:
 				for x, y in line:
-					if (x, y) in self.retrieves: continue
 					size = self.pensizes[i]
 					canvas.create_oval(x-size, y-size, x+size, y+size, fill=self.pencolors[i], width=0)
 					i += 1
-
 		
 	def redrawAll(self, canvas):
 		if self.splash:
@@ -579,6 +658,7 @@ class MyApp(App):
 		elif self.draw:
 			MyApp.drawDrawPage(self, canvas)
 			MyApp.drawSnap(self, canvas)
+			MyApp.drawAllLines(self, canvas)
 			MyApp.drawColors(self, canvas)
 
 if __name__ == "__main__":
