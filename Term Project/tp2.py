@@ -2,8 +2,8 @@
 from cmu_112_graphics import *
 import numpy as np
 
+# cited from http://www.cs.cmu.edu/~112/index.html
 def almostEqual(d1, d2, epsilon=10**-7):
-    # note: use math.isclose() outside 15-112 with Python version 3.5 or later
     return (abs(d2 - d1) < epsilon)
 
 class MyApp(App):
@@ -54,6 +54,12 @@ class MyApp(App):
 		self.erases = []
 		self.retrieve = False
 		self.retrieves = set()
+		# buttons
+		self.moveMode = False
+		self.xL, self.yL, self.xR, self.yR = -1, -1, -1, -1
+		self.disMoveX, self.disMoveY = 0, 0
+		self.resizeMode = False
+		self.probX, self.probY = 1, 1
 
 	def buttonParas(self):
 		# splash button parameters
@@ -68,6 +74,10 @@ class MyApp(App):
 		self.rx3, self.ry3, self.rx4, self.ry4 = self.width-150, self.height-90, self.width-30, self.height-30
 		# bottom-middle button
 		self.mx1, self.my1, self.mx2, self.my2 = self.width/2-60, self.height-90, self.width/2+60, self.height-30
+
+		# draw page buttons
+		self.dpx1, self.dpy1, self.dpx2, self.dpy2 = self.width-150, 100, self.width-30, 160
+		self.dpx3, self.dpy3, self.dpx4, self.dpy4 = self.width-150, 190, self.width-30, 250
 
 	def colorParas(self):
 		# firebrick1, IndianRed1, salmon1, chocolate1, gold, yellow2, khaki1, antique white,  green2, spring green, pale green, snow
@@ -108,12 +118,31 @@ class MyApp(App):
 		canvas.create_rectangle(self.cxB, self.csl, self.cxB+30, self.csl+30, fill='black', width=0)
 
 	def keyPressed(self, event):
+		cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
+		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
+		disX, disY = (x3+x4)/2, (y3+y4)/2
 		if event.key == 'q':
 			self.quit()
 		elif event.key == 'a':
 			self.getSnapshot()
 		elif event.key == 's':
 			self.saveSnapshot()
+		elif self.moveMode:
+			if event.key == 'Up':
+				if y3 >= self.dry1:
+					self.disMoveY -= 10
+			elif event.key == 'Down':
+				if y4 <= self.dry2:
+					self.disMoveY += 10
+			elif event.key == 'Left':
+				if x3 >= self.drx1:
+					self.disMoveX -= 10
+			elif event.key == 'Right':
+				if x4 <= self.drx2:
+					self.disMoveX += 10
+		elif self.resizeMode:
+			if event.key == 'Up':
+
 
 	def mouseDragged(self, event):
 		if self.draw:
@@ -121,6 +150,8 @@ class MyApp(App):
 			MyApp.penSize(self, event.x, event.y)
 			MyApp.eraseSnap(self, event.x, event.y)
 			MyApp.retrieveLine(self, event.x, event.y)
+			MyApp.moveSnap(self, event.x, event.y)
+			MyApp.resizeSnap(self, event.x, event.y)
 		elif self.cameraOn:
 			MyApp.adjustSnap(self, event.x, event.y)
 
@@ -138,6 +169,7 @@ class MyApp(App):
 			if (self.height/2+80) <= y <= (self.height-self.marginH+15):
 				self.camRangeY = self.height-y
 
+	# learned from https://docs.opencv.org/master/d9/df8/tutorial_root.html
 	def dealSnap(self):
 		gray = cv2.cvtColor(np.float32(self.snap), cv2.COLOR_BGR2GRAY)
 		# ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)
@@ -160,7 +192,7 @@ class MyApp(App):
 	def drawPen(self, x, y):
 		if not (self.drx1+8) <= x <= (self.drx2-8): return
 		if not (self.dry1+8) <= y <= (self.dry2-8): return
-		if self.retrieve: return
+		if self.retrieve or self.moveMode or self.resizeMode: return
 		# fill up all the gaps between the last dot and the current dot
 		if self.drawLine[self.trackLine] != []:
 			x0, y0 = self.drawLine[self.trackLine][-1]
@@ -186,7 +218,18 @@ class MyApp(App):
 	def retrieveLine(self, x, y):
 		if not self.retrieve: return
 		self.retrieves.add((x, y))
+		# i, j = 0, 0
+		# if self.drawLine != []:
+		# 	for line in self.drawLine:
+		# 		for x1, y1 in line:
+		# 			if x1 == x and y1 == y:
+		# 				self.drawLine[j].remove((x, y))
+		# 				self.pensizes.remove(i)
+		# 				self.pencolors.remove(i)
+		# 			i += 1
+		# 	j += 1
 
+	# cited from http://www.cs.cmu.edu/~112/index.html
 	def getSnapshot(self):
 		if self.camFixed:
 			rW, rH = self.marginW*2+20, self.marginH*2.1
@@ -198,24 +241,97 @@ class MyApp(App):
 		result = ImageGrabber.grab((x0+rW,y0+40+rH,self.width*2-rW, self.height*2.1+20-rH))
 		return result
 
-	def keyReleased(self, event):
-		if event.key == 'Space':
-			self.messages += ' '
-		elif event.key == 'Enter':
-			self.messages += '\n'
-		elif event.key == 'Delete':
-			self.messages = self.messages[:-1]
-		else:
-			self.messages += event.key
+	def resizeSnap(self, x, y):
+		if not self.resizeMode: return
+		if not self.drx1 <= x <= self.drx2: return
+		if not self.dry1 <= y <= self.dry2: return
+		cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
+		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
+		disX, disY = (x3+x4)/2, (y3+y4)/2
+		# four corners
+		if (x3-30) <= x <= (x3+30) and (y3-30) <= y <= (y3+30):
+			moveX = x3 - x
+			moveY = y3 - y
+			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
+			prob = max(probX, probY)
+			self.probX = self.probY = prob
+			return
+		if (x3-80) <= x <= (x3+80) and (y4-80) <= y <= (y4+80):
+			moveX = x3 - x
+			moveY = y - y4
+			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
+			prob = max(probX, probY)
+			self.probX = self.probY = prob
+			return
+		if (x4-80) <= x <= (x4+80) and (y3-80) <= y <= (y3+80):
+			moveX = x - x4
+			moveY = y3 - y
+			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
+			prob = max(probX, probY)
+			self.probX = self.probY = prob
+			return
+		if (x4-80) <= x <= (x4+80) and (y4-80) <= y <= (y4+80):
+			moveX = x - x4
+			moveY = y - y4
+			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
+			prob = max(probX, probY)
+			self.probX = self.probY = prob
+			return
+		# leftside x
+		if (x3-30) <= x <= (x3+30):
+			moveX = x3 - x
+			self.probX = (moveX+disX) / disX
+		# rightside x
+		if (x4-30) <= x <= (x4+30) :
+			moveX = x - x4
+			self.probX = (moveX+disX) / disX
+		# upside y
+		if (y3-30) <= y <= (y3+30):
+			moveY = y3 - y
+			self.probY = (moveY+disY) / disY
+		# downside y
+		if (y4-30) <= y <= (y4+30):
+			moveY = y - y4
+			self.probY = (moveY+disY) / disY
 
 	def drawSnap(self, canvas):
 		if self.contours == None:  return
+		cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
+		disX, disY = (self.xR-self.xL)/2, (self.yB-self.yT)/2
 		for i in range(1, len(self.contours)):
 			cont = self.contours[i]
 			for cordi in cont:
 				x, y = cordi[0][0]+(self.drx1+self.drx2)*0.24/2, cordi[0][1]+(self.dry1+self.dry2)*0.5/2
+				x = (x-cx)*self.probX+cx+self.disMoveX
+				x1, x2 = x-2*self.probX, x+2*self.probX
+				y = (y-cy)*self.probY+cy+self.disMoveY
+				y1, y2 = y-2*self.probY, y+2*self.probY
 				if not (x, y) in self.erases:
-					canvas.create_oval(x-2, y-2, x+2, y+2, fill='black', width=0)
+					canvas.create_oval(x1, y1, x2, y2, fill='black', width=0)
+		if self.moveMode:
+			canvas.create_rectangle((self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY, outline='lightGreen', width=5)
+		elif self.resizeMode:
+			x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
+			canvas.create_rectangle(x3, y3, x4, y4, outline='yellow2', width=5)
+			rx1, ry1, rx2, ry2 = x3, y3, x4, y3
+			rx3, ry3, rx4, ry4 = x3, y4, x4, y4
+			canvas.create_oval(rx1-10, ry1-10, rx1+10, ry1+10, fill='lightGreen', width=0)
+			canvas.create_oval(rx2-10, ry2-10, rx2+10, ry2+10, fill='lightGreen', width=0)
+			canvas.create_oval(rx3-10, ry3-10, rx3+10, ry3+10, fill='lightGreen', width=0)
+			canvas.create_oval(rx4-10, ry4-10, rx4+10, ry4+10, fill='lightGreen', width=0)
+
+	def findSnapRange(self):
+		if self.contours == None: return
+		xL, xR, yT, yB = self.drx2, self.drx1, self.dry2, self.dry1
+		for i in range(1, len(self.contours)):
+			cont = self.contours[i]
+			for cordi in cont:
+				x, y = cordi[0][0]+(self.drx1+self.drx2)*0.24/2, cordi[0][1]+(self.dry1+self.dry2)*0.5/2
+				if x < xL: xL = x
+				if x > xR: xR = x
+				if y < yT: yT = y
+				if y > yB: yB = y
+		self.xL, self.yT, self.xR, self.yB = xL-10, yT-10, xR+10, yB+10
 
 	def mousePressed(self, event):
 		if self.splash:
@@ -255,6 +371,7 @@ class MyApp(App):
 				MyApp.dealSnap(self)
 				self.cameraOn = False
 				self.draw = True
+				MyApp.findSnapRange(self)
 		elif self.dash:
 			# edit back
 			if self.lx1 <= event.x <= self.lx2 and self.ly1 <= event.y <= self.ly2:
@@ -276,6 +393,7 @@ class MyApp(App):
 				self.splash = True
 				if not self.saveDraw:
 					MyApp.drawParas(self)
+					MyApp.cameraParas(self)
 			# draw save
 			elif self.rx3 <= event.x <= self.rx4 and self.ry3 <= event.y <= self.ry4:
 				self.saveDraw = True
@@ -284,8 +402,26 @@ class MyApp(App):
 			elif (720 <= event.x <= 750 and self.height-70 <= event.y <= self.height-60): 
 				self.retrieve = not self.retrieve
 				MyApp.retrieveLine(self, event.x, event.y)
+			elif (self.dpx1 <= event.x <= self.dpx2 and self.dpy1 <= event.y <= self.dpy2):
+				self.moveMode = not self.moveMode
+			elif (self.dpx3 <= event.x <= self.dpx4 and self.dpy3 <= event.y <= self.dpy4):
+				self.resizeMode = not self.resizeMode
 			else:
 				MyApp.drawColorCheck(self, event.x, event.y)
+
+	def moveSnap(self, x, y):
+		if not self.moveMode: return
+		cx, cy = (self.xL+self.xR)/2, (self.yT+self.yB)/2
+		if (self.xL-20) <= x <= (self.xR+20):
+			leftside = self.xL+10+(x-cx)
+			rightside = self.xR-10+(x-cx)
+			if leftside >= self.drx1 and rightside <= self.drx2:
+				self.disMoveX = x-cx
+		if (self.yT-20) <= y <= (self.yB+20):
+			topside = self.yT+10+(y-cy)
+			bottomside = self.yB-10+(y-cy)
+			if topside >= self.dry1 and bottomside <= self.dry2:
+				self.disMoveY = y-cy
 
 	def drawColorCheck(self, x, y):
 		if self.cxF <= x <= self.cxF+30 and self.cfl <= y <= self.cfl+30:
@@ -351,7 +487,7 @@ class MyApp(App):
 	def drawSplashPage(self, canvas):
 		canvas.create_image(self.width/2, self.height/2, image=ImageTk.PhotoImage(self.img1))
 		# canvas.create_rectangle(0, 0, self.width, self.height, fill='SkyBlue1')
-		canvas.create_text(self.width/2, self.height/2-100, text='Magic Converter', font='Baloo 98', fill='steel blue')
+		canvas.create_text(self.width/2, self.height/2-100, text='Drawing Black Box', font='Baloo 98', fill='steel blue')
 
 		canvas.create_rectangle(self.bx1, self.by1, self.bx2, self.by2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.bx1+self.bx2)/2, (self.by1+self.by2)/2, text='Scan', font='Baloo 38', fill='steel blue')
@@ -379,9 +515,6 @@ class MyApp(App):
 		canvas.create_text((self.rx3+self.rx4)/2, (self.ry3+self.ry4)/2, text='Convert', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.mx1, self.my1, self.mx2, self.my2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.mx1+self.mx2)/2, (self.ry3+self.ry4)/2, text='OK', font='Baloo 28', fill='steel blue')
-
-	# def drawText(self):
-	# 	canvas.create_text(self.tx1+20, self.ty1+20, text=self.messages, font='Arial 18', anchor='nw')
 
 	def drawDashboard(self, canvas):
 		# canvas.create_image(0, 0, anchor = NW, image = img)
@@ -411,6 +544,12 @@ class MyApp(App):
 		canvas.create_oval(pcx-self.drSize, pcy-self.drSize, pcx+self.drSize, pcy+self.drSize, fill=self.drColor, width=0)
 		canvas.create_rectangle(self.scrollX-7, self.scrollY-7, self.scrollX+7, self.scrollY+7, fill='steel blue', width=3, outline='lavender')
 		color1, color2 = 'white', 'yellow2'
+		# buttons on the right side
+		canvas.create_rectangle(self.dpx1, self.dpy1, self.dpx2, self.dpy2, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.dpx1+self.dpx2)/2, (self.dpy1+self.dpy2)/2, text='Move', font='Baloo 28', fill='steel blue')
+		canvas.create_rectangle(self.dpx3, self.dpy3, self.dpx4, self.dpy4, fill='lavender', width=8, outline='steel blue')
+		canvas.create_text((self.dpx3+self.dpx4)/2, (self.dpy3+self.dpy4)/2, text='Resize', font='Baloo 28', fill='steel blue')
+
 		if self.erase:
 			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color2, width=0)
 		if not self.erase:
