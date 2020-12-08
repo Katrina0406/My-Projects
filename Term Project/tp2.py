@@ -63,6 +63,20 @@ class MyApp(App):
 		self.flipH = False
 		self.flipV = False
 
+		# draw modes
+		self.drawMove = False
+		self.drawMoveX, self.drawMoveY = 0, 0
+		self.moveLine = False
+		self.drawResize = False
+		self.drawprobX, self.drawprobY = 1, 1
+		self.resizeLine = False
+		self.drawRotate = False
+		self.drawFlipH = False
+		self.flipHLine = False
+		self.drawFlipV = False
+		self.flipVLine = False
+		MyApp.changeTempParas(self)
+
 	def buttonParas(self):
 		# splash button parameters
 		self.bx1, self.by1, self.bx2, self.by2 = self.width/2-475, self.height/2+50, self.width/2-275, self.height/2+150
@@ -123,6 +137,173 @@ class MyApp(App):
 		canvas.create_rectangle(self.cxOc, self.csl, self.cxOc+30, self.csl+30, fill='orchid2', width=0)
 		canvas.create_rectangle(self.cxRb, self.csl, self.cxRb+30, self.csl+30, fill='RosyBrown1', width=0)
 		canvas.create_rectangle(self.cxB, self.csl, self.cxB+30, self.csl+30, fill='black', width=0)
+
+	def findTempFrame(self, x, y):
+		if self.drawMove and self.moveLine: return
+		if self.drawResize and self.resizeLine: return
+		if self.drawFlipH and self.flipHLine: return
+		if self.drawFlipV and self.flipVLine: return
+		if ((not self.drawMove) and (not self.drawResize) and (not self.drawRotate)
+			and (not self.drawFlipH) and (not self.drawFlipV)):
+			return
+		if not (self.drx1+8) <= x <= (self.drx2-8): return
+		if not (self.dry1+8) <= y <= (self.dry2-8): return
+		self.tempF.append((x, y))
+		dis = 0
+		x0, y0 = self.tempx0, self.tempy0
+		x1, y1 = -1, -1
+		for tx, ty in self.tempF:
+			if tx > x0 and ty > y0:
+				tempDis = ((tx-x0)**2 + (ty-y0)**2)**0.5
+				if tempDis > dis:
+					dis = tempDis
+					x1, y1 = tx, ty
+		self.tempx1, self.tempy1 = x1, y1
+
+	def flipDrawLines(self):
+		if self.drawLine == []: return
+		if (not self.flipHLine) and (not self.flipVLine): return
+		minLeft, maxRight, minTop, maxBottom = self.tempx1, self.tempx0, self.tempy1, self.tempy0
+		for i in range(0, len(self.drawLine)):
+			line = self.drawLine[i]
+			for j in range(0, len(line)):
+				x1, y1 = line[j]
+				if ((self.tempx0+5) <= x1 <= (self.tempx1-5)
+						and (self.tempy0+5) <= y1 <= (self.tempy1-5)):
+					# find the four bounds of the chosen graph
+					if x1 < minLeft:
+						minLeft = x1
+					if x1 > maxRight:
+						maxRight = x1
+					if y1 < minTop:
+						minTop = y1
+					if y1 > maxBottom:
+						maxBottom = y1
+		cx, cy = (minLeft+maxRight)/2, (minTop+maxBottom)/2
+		# flip the graph
+		for i in range(0, len(self.drawLine)):
+			line = self.drawLine[i]
+			for j in range(0, len(line)):
+				x1, y1 = line[j]
+				if ((self.tempx0+5) <= x1 <= (self.tempx1-5)
+						and (self.tempy0+5) <= y1 <= (self.tempy1-5)):
+					if self.flipHLine:
+						if x1 > cx:
+							x1 = x1-(x1-cx)*2
+						elif x1 < cx:
+							x1 = x1+(x1-cx)*2
+					elif self.flipVLine:
+						if y1 > cy:
+							y1 = y1-(y1-cy)*2
+						elif y1 < cy:
+							y1 = y1+(y1-cy)*2
+					self.drawLine[i][j] = (x1, y1)
+		
+	def moveDrawLines(self, x, y):
+		if not self.moveLine: return
+		if not (self.tempx0+5) <= x <= (self.tempx1-5): return
+		if not (self.tempy0+5) <= y <= (self.tempy1-5): return
+		cx, cy = (self.tempx0+self.tempx1)/2, (self.tempy0+self.tempy1)/2
+		leftside = self.tempx0+5+(x-cx)
+		rightside = self.tempx1-5+(x-cx)
+		if leftside >= self.drx1 and rightside <= self.drx2:
+			self.drawMoveX = x-cx
+		topside = self.tempy0+5+(y-cy)
+		bottomside = self.tempy1-5+(y-cy)
+		if topside >= self.dry1 and bottomside <= self.dry2:
+			self.drawMoveY = y-cy
+		changed = False
+		if self.drawLine != []:
+			for i in range(0, len(self.drawLine)):
+				line = self.drawLine[i]
+				for j in range(0, len(line)):
+					x1, y1 = line[j]
+					if ((self.tempx0+5) <= x1 <= (self.tempx1-5)
+							and (self.tempy0+5) <= y1 <= (self.tempy1-5)):
+						self.drawLine[i][j] = (x1+self.drawMoveX, y1+self.drawMoveY)
+						changed = True
+		if changed:
+			self.tempx0, self.tempy0 = self.tempx0+self.drawMoveX, self.tempy0+self.drawMoveY
+			self.tempx1, self.tempy1 = self.tempx1+self.drawMoveX, self.tempy1+self.drawMoveY
+
+	def resizeDrawLines(self, x, y):
+		if not self.resizeLine: return
+		cx, cy = (self.tempx0+self.tempx1)/2, (self.tempy0+self.tempy1)/2
+		disX, disY = (self.tempx1-self.tempx0)/2, (self.tempy1-self.tempy0)/2
+		# four corners
+		if (self.tempx0-10) <= x <= (self.tempx0+15) and (self.tempy0-10) <= y <= (self.tempy0+15):
+			moveX = (self.tempx0 - x)
+			moveY = (self.tempy0 - y)
+			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
+			prob = max(probX, probY)
+			self.drawprobX = self.drawprobY = prob
+		elif (self.tempx0-10) <= x <= (self.tempx0+15) and (self.tempy1-15) <= y <= (self.tempy1+10):
+			moveX = (self.tempx0 - x)
+			moveY = (y - self.tempy1)
+			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
+			prob = max(probX, probY)
+			self.drawprobX = self.drawprobY = prob
+		elif (self.tempx1-15) <= x <= (self.tempx1+10) and (self.tempy0-10) <= y <= (self.tempy0+15):
+			moveX = (x - self.tempx1)
+			moveY = (self.tempy0 - y)
+			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
+			prob = max(probX, probY)
+			self.drawprobX = self.drawprobY = prob
+		elif (self.tempx1-15) <= x <= (self.tempx1+10) and (self.tempy1-15) <= y <= (self.tempy1+10):
+			moveX = (x - self.tempx1)
+			moveY = (y - self.tempy1)
+			probX, probY = (moveX+disX) / disX, (moveY+disY) / disY
+			prob = max(probX, probY)
+			self.drawprobX = self.drawprobY = prob
+		# leftside x
+		elif (self.tempx0-10) <= x < self.tempx0:
+			moveX = (self.tempx0 - x)
+			self.drawprobX = (moveX+disX) / disX
+		elif (self.tempx0+5) < x <= (self.tempx0+10):
+			moveX = (self.tempx0+5 - x)
+			self.drawprobX = (moveX+disX) / disX
+		# rightside x
+		elif (self.tempx1-5-10) <= x < (self.tempx1-5) :
+			moveX = (x - (self.tempx1-5))
+			self.drawprobX = (moveX+disX) / disX
+		elif self.tempx1 < x <= (self.tempx1+10) :
+			moveX = (x - self.tempx1)
+			self.drawprobX = (moveX+disX) / disX
+		# upside y
+		elif (self.tempy0-10) <= y < self.tempy0:
+			moveY = (self.tempy0 - y)
+			self.drawprobY = (moveY+disY) / disY
+		elif (self.tempy0+5) < y <= (self.tempy0+10):
+			moveY = (self.tempy0+5 - y)
+			self.drawprobY = (moveY+disY) / disY
+		# downside y
+		elif (self.tempy1-5-10) <= y < (self.tempy1-5):
+			moveY = (y - (self.tempy1-5))
+			self.drawprobY = (moveY+disY) / disY
+		elif self.tempy1 < y <= (self.tempy1+10):
+			moveY = (y - self.tempy1)
+			self.probY = (moveY+disY) / disY
+
+		changed = False
+		if self.drawLine != []:
+			for i in range(0, len(self.drawLine)):
+				line = self.drawLine[i]
+				for j in range(0, len(line)):
+					x1, y1 = line[j]
+					if ((self.tempx0-15) <= x1 <= (self.tempx1+10)
+							and (self.tempy0-15) <= y1 <= (self.tempy1+10)):
+						self.drawLine[i][j] = ((x1-cx)*self.drawprobX+cx, (y1-cy)*self.drawprobY+cy)
+						changed = True
+		if changed:
+			self.tempx0, self.tempy0 = (self.tempx0-cx)*self.drawprobX+cx, (self.tempy0-cy)*self.drawprobY+cy
+			self.tempx1, self.tempy1 = (self.tempx1-cx)*self.drawprobX+cx, (self.tempy1-cy)*self.drawprobY+cy
+
+	def drawTempFrame(self, canvas):
+		if ((not self.drawMove) and (not self.drawResize) and (not self.drawRotate)
+			and (not self.drawFlipH) and (not self.drawFlipV)):
+			return
+		if self.tempx0 == -1 or self.tempx1 == -1: return
+		canvas.create_rectangle(self.tempx0, self.tempy0, self.tempx1, self.tempy1, width=5, outline='lightGreen')
 
 	def keyPressed(self, event):
 		if event.key == 'q':
@@ -185,6 +366,9 @@ class MyApp(App):
 			MyApp.eraseSnap(self, event.x, event.y)
 			MyApp.moveSnap(self, event.x, event.y)
 			MyApp.resizeSnap(self, event.x, event.y)
+			MyApp.findTempFrame(self, event.x, event.y)
+			MyApp.moveDrawLines(self, event.x, event.y)
+			MyApp.resizeDrawLines(self, event.x, event.y)
 		elif self.cameraOn:
 			MyApp.adjustSnap(self, event.x, event.y)
 
@@ -225,7 +409,9 @@ class MyApp(App):
 	def drawPen(self, x, y):
 		if not (self.drx1+8) <= x <= (self.drx2-8): return
 		if not (self.dry1+8) <= y <= (self.dry2-8): return
-		if (self.moveMode or self.resizeMode or self.erase or self.rotateMode): 	return
+		if (self.moveMode or self.resizeMode or self.erase or self.rotateMode or self.drawMove
+			or self.drawResize or self.drawRotate or self.drawFlipH or self.drawFlipV):
+			return
 		# fill up all the gaps between the last dot and the current dot
 		if self.drawLine[self.trackLine] != []:
 			x0, y0 = self.drawLine[self.trackLine][-1]
@@ -334,7 +520,7 @@ class MyApp(App):
 		elif (y4-5-40) <= y < (y4-5):
 			moveY = (y - (y4-5))
 			self.probY = (moveY+disY) / disY
-		elif y4 < y <= (y4+40):
+		elif y4 < y <= (y4+80):
 			moveY = (y - y4)
 			self.probY = (moveY+disY) / disY
 
@@ -394,7 +580,6 @@ class MyApp(App):
 			canvas.create_oval(rx2-10, ry2-10, rx2+10, ry2+10, fill='HotPink1', width=0)
 			canvas.create_oval(rx3-10, ry3-10, rx3+10, ry3+10, fill='HotPink1', width=0)
 			canvas.create_oval(rx4-10, ry4-10, rx4+10, ry4+10, fill='HotPink1', width=0)
-
 
 	def findSnapRange(self):
 		if self.contours == None: return
@@ -459,10 +644,37 @@ class MyApp(App):
 		elif self.draw:
 			# create a new line list
 			if ((self.drx1+8) <= event.x <= (self.drx2-8) and (self.dry1+8) <= event.y <= (self.dry2-8)):
-				self.drawLine.append([])
-				self.trackLine += 1
-				self.pencolors.append(self.drColor)
-				self.pensizes.append(self.drSize)
+				# move
+				if self.drawMove and self.findTemp:
+					self.tempx0, self.tempy0 = event.x, event.y
+					self.findTemp = False
+				elif self.drawMove and (not self.findTemp):
+					self.moveLine = True
+				# resize
+				elif self.drawResize and self.findTemp:
+					self.tempx0, self.tempy0 = event.x, event.y
+					self.findTemp = False
+				elif self.drawResize and (not self.findTemp):
+					self.resizeLine = True
+				# flipH
+				elif self.drawFlipH and self.findTemp:
+					self.tempx0, self.tempy0 = event.x, event.y
+					self.findTemp = False
+				elif self.drawFlipH and (not self.findTemp):
+					self.flipHLine = True
+					MyApp.flipDrawLines(self)
+				# flipV
+				elif self.drawFlipV and self.findTemp:
+					self.tempx0, self.tempy0 = event.x, event.y
+					self.findTemp = False
+				elif self.drawFlipV and (not self.findTemp):
+					self.flipVLine = True
+					MyApp.flipDrawLines(self)
+				else:
+					self.drawLine.append([])
+					self.trackLine += 1
+					self.pencolors.append(self.drColor)
+					self.pensizes.append(self.drSize)
 			# draw back
 			elif self.lx1 <= event.x <= self.lx2 and self.ly1 <= event.y <= self.ly2:
 				self.draw = False
@@ -487,9 +699,40 @@ class MyApp(App):
 				self.flipH = not self.flipH
 			elif (self.dpx9 <= event.x <= self.dpx10 and self.dpy9 <= event.y <= self.dpy10):
 				self.flipV = not self.flipV
+			# change drawing lines
+			elif (((event.x-(self.dpx1-80+self.dpx2-160)/2)**2 + (event.y-(self.dpy1+10+self.dpy2-10)/2)**2)**0.5 <= 40):
+				self.drawMove = not self.drawMove
+				if not self.findTemp:
+					MyApp.changeTempParas(self)
+					self.drawMoveX, self.drawMoveY = 0, 0
+					self.moveLine = False
+			elif (((event.x-(self.dpx3-80+self.dpx4-160)/2)**2 + (event.y-(self.dpy3+10+self.dpy4-10)/2)**2)**0.5 <= 40):
+				self.drawResize = not self.drawResize
+				if not self.findTemp:
+					MyApp.changeTempParas(self)
+					self.drawprobX, self.drawprobY = 1, 1
+					self.resizeLine = False
+			elif (((event.x-(self.dpx5-80+self.dpx6-160)/2)**2 + (event.y-(self.dpy5+10+self.dpy6-10)/2)**2)**0.5 <= 40):
+				self.drawRotate = not self.drawRotate
+			elif (((event.x-(self.dpx7-80+self.dpx8-160)/2)**2 + (event.y-(self.dpy7+10+self.dpy8-10)/2)**2)**0.5 <= 40):
+				self.drawFlipH = not self.drawFlipH
+				if not self.findTemp:
+					MyApp.changeTempParas(self)
+					self.flipHLine = False
+			elif (((event.x-(self.dpx9-80+self.dpx10-160)/2)**2 + (event.y-(self.dpy9+10+self.dpy10-10)/2)**2)**0.5 <= 40):
+				self.drawFlipV = not self.drawFlipV
+				if not self.findTemp:
+					MyApp.changeTempParas(self)
+					self.flipVLine = False
 			else:
 				MyApp.drawColorCheck(self, event.x, event.y)
 				MyApp.resizeSnap(self, event.x, event.y)
+
+	def changeTempParas(self):
+		self.tempx0 = self.tempy0 = -1
+		self.tempx1 = self.tempy1 = -1
+		self.tempF = []
+		self.findTemp = True
 
 	def moveSnap(self, x, y):
 		if not self.moveMode: return
@@ -637,6 +880,13 @@ class MyApp(App):
 		canvas.create_text((self.dpx13+self.dpx14)/2, (self.dpy13+self.dpy14)/2, text='Output', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.dpx13-40, self.dpy14+20, self.dpx14+5, self.dpy14+25, fill='lavender', width=0)
 
+		# for adjusting drawing lines
+		canvas.create_oval(self.dpx1-80, self.dpy1+10, self.dpx2-160, self.dpy2-10, fill='steel blue', width=0)
+		canvas.create_oval(self.dpx3-80, self.dpy3+10, self.dpx4-160, self.dpy4-10, fill='lavender', width=0)
+		canvas.create_oval(self.dpx5-80, self.dpy5+10, self.dpx6-160, self.dpy6-10, fill='steel blue', width=0)
+		canvas.create_oval(self.dpx7-80, self.dpy7+10, self.dpx8-160, self.dpy8-10, fill='lavender', width=0)
+		canvas.create_oval(self.dpx9-80, self.dpy9+10, self.dpx10-160, self.dpy10-10, fill='steel blue', width=0)
+
 		if self.erase:
 			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color2, width=0)
 		if not self.erase:
@@ -667,6 +917,7 @@ class MyApp(App):
 			MyApp.drawSnap(self, canvas)
 			MyApp.drawAllLines(self, canvas)
 			MyApp.drawColors(self, canvas)
+			MyApp.drawTempFrame(self, canvas)
 
 if __name__ == "__main__":
 	MyApp(width=1300, height=800)
