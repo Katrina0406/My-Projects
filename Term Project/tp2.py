@@ -3,17 +3,27 @@ from cmu_112_graphics import *
 import numpy as np
 import math
 
-# cited from http://www.cs.cmu.edu/~112/index.html
+# the three functions below are cited from http://www.cs.cmu.edu/~112/index.html
 def almostEqual(d1, d2, epsilon=10**-7):
     return (abs(d2 - d1) < epsilon)
 
+def readFile(path):
+    with open(path, "rt") as f:
+        return f.read()
+
+def writeFile(path, contents):
+    with open(path, "wt") as f:
+        f.write(contents)
+
 class MyApp(App):
+
 	def appStarted(self):
 		self.width = 1300
 		self.height = 800
 		self.cameraOn = False
 		self.splash = True
 		self.help = False
+		self.text = None
 
 		MyApp.drawParas(self)
 		MyApp.buttonParas(self)
@@ -24,8 +34,104 @@ class MyApp(App):
 		self.img1 = self.loadImage('dash.jpeg')
 		self.img1 = self.scaleImage(self.img1, 2.2)
 
-		# textbox parameters
-		self.tx1, self.ty1, self.tx2, self.ty2 = self.width/2-100, self.height/2-330, self.width/2+600, self.height/2+270
+		try:
+			self.text = readFile('draw.txt')
+		except:
+			return
+		# try:
+		# 	MyApp.getSaveInfo(self)
+		# except:
+		# 	return
+		MyApp.getSaveInfo(self)
+
+	def getSaveInfo(self):
+		# basically extract info from the saved file
+		if self.text != None:
+			info = self.text.split("+")
+			if len(info[0]) > 5:
+				self.pensizes = info[0][1:-1]
+				self.pensizes = list(self.pensizes.split(", "))
+				for i in range(len(self.pensizes)):
+					self.pensizes[i] = float(self.pensizes[i])
+			if len(info[1]) > 2:
+				self.pencolors = info[1][1:-1]
+				self.pencolors = list(self.pencolors.split(", "))
+				for i in range(len(self.pencolors)):
+					self.pencolors[i] = self.pencolors[i][1:-1]
+
+			drawLine = info[2][1:-1]
+			i = 0
+			while i < len(drawLine):
+				if drawLine[i] == ']':
+					#(x1, y1), (x2, y2)..
+					tempList = drawLine[1:i]
+					j = 0
+					tempCor = []
+					while j < len(tempList):
+						if tempList[j] == ')':
+							tempT = list(tempList[1:j].split(", "))
+							tempCor.append((float(tempT[0]), float(tempT[1])))
+							if j != len(tempList)-1:
+								tempList = tempList[j+3:]
+								j = 0
+							else:
+								break
+						else:
+							j += 1
+					self.drawLine.append(tempCor)
+					if i != len(drawLine)-1:
+						drawLine = drawLine[i+3:]
+						i = 0
+					else:
+						break
+				else:
+					i += 1
+
+			self.trackLine = int(info[3])
+			self.bgColor = info[4]
+			self.disMoveX = float(info[5])
+			self.disMoveY = float(info[6])
+			self.probX = float(info[7])
+			self.probY = float(info[8])
+
+			contours = info[9][8:-15]
+			contours = list(contours.split(", dtype=int32), array("))
+			n = 0
+			while n < len(contours):
+				cont = contours[0][1:-1].strip(" ")
+				k = 0
+				while k < len(cont)-1:
+					if cont[k:k+2] == ']]':
+						# [[x1, y1]], [[x2, y2]]...
+						tempList = cont[1:k+1]
+						m = 0
+						tempCor = []
+						while m < len(tempList):
+							if tempList[m] == ']':
+								tempT = list(tempList[1:m].split(", "))
+								x = float(tempT[0])
+								y = float(tempT[1])
+								tempCor.append([(x, y)])
+								if m != len(tempList)-1:
+									tempList = tempList[m+3:]
+									m = 0
+								else:
+									break
+							else:
+								m += 1
+						self.contours.append(tempCor)
+						if k != len(contours)-2:
+							contours = contours[k+3:]
+							k = 0
+						else:
+							break
+					else:
+						k += 1
+
+	def saveDrawing(self):
+		if self.saveDraw:
+			content = f'{self.pensizes}+{self.pencolors}+{self.drawLine}+{self.trackLine}+{self.bgColor}+{self.disMoveX}+{self.disMoveY}+{self.probX}+{self.probY}+{self.contours}'
+			writeFile('draw.txt', content)
 
 	def cameraParas(self):
 		self.marginH, self.marginW = 100, 80
@@ -103,6 +209,9 @@ class MyApp(App):
 		self.dpx9, self.dpy9, self.dpx10, self.dpy10 = self.width-150, 440, self.width-30, 500
 		self.dpx11, self.dpy11, self.dpx12, self.dpy12 = self.width-150, 520, self.width-30, 580
 		self.dpx13, self.dpy13, self.dpx14, self.dpy14 = self.width-150, 600, self.width-30, 660
+
+		# clear button
+		self.clearx1, self.cleary1, self.clearx2, self.cleary2 = self.drx2+20, self.dry2-40, self.drx2+60, self.dry2
 
 	def colorParas(self):
 		# firebrick1, IndianRed1, salmon1, chocolate1, gold, yellow2, khaki1, antique white,  green2, spring green, pale green, snow
@@ -712,6 +821,12 @@ class MyApp(App):
 			# draw save
 			elif self.rx3 <= event.x <= self.rx4 and self.ry3 <= event.y <= self.ry4:
 				self.saveDraw = True
+				MyApp.saveDrawing(self)
+			# draw clear
+			elif (((event.x-(self.clearx1+self.clearx2)/2)**2 + (event.y-(self.cleary1+self.cleary2)/2)**2)**0.5 <= 40):
+				MyApp.drawParas(self)
+				MyApp.cameraParas(self)
+				self.draw = True
 			elif (720 <= event.x <= 760 and self.height-60 <= event.y <= self.height-40): 
 				self.retrieve = not self.retrieve
 			elif (self.dpx1 <= event.x <= self.dpx2 and self.dpy1 <= event.y <= self.dpy2):
@@ -933,12 +1048,21 @@ class MyApp(App):
 	def drawHelpboard(self, canvas):
 		# canvas.create_image(0, 0, anchor = NW, image = img)
 		canvas.create_rectangle(0, 0, self.width, self.height, fill='SkyBlue1')
-		canvas.create_rectangle(self.tx1, self.ty1, self.tx2, self.ty2, fill='lavender', width=8, outline='steel blue')
-		# back button & save button
+		canvas.create_text(self.width/2, 52, text='Help Instruction', font='Baloo 48', fill='steel blue')
+		canvas.create_text(80, 90, text='* Scan:', font='Baloo 30', fill='MediumPurple1', anchor='nw')
+		canvas.create_text(220, 90, text='click "Scan" button,  then click "OK" button to catch a moment', font='Baloo 27', fill='lavender', anchor='nw')
+		canvas.create_text(220, 120, text='use the green frame to select the range,  then click "Convert" to extract contours', font='Baloo 27', fill='lavender', anchor='nw')
+		canvas.create_text(80, 150, text='* Upload:', font='Baloo 30', fill='MediumPurple1', anchor='nw')
+		# "* Draw: "
+		# "See the yellow message on the top for each button's function."
+		# "You have to click the circle on the left of 'Output'button to open the output mode"
+		# "Then click 'Output' button to save your drawing on your computer"
+		# canvas.create_text(220, 150, text='click "Scan" button,  then click "OK" button to catch a moment', font='Baloo 27', fill='lavender', anchor='nw')
+		# canvas.create_text(80, 150, text='* Upload:', font='Baloo 30', fill='MediumPurple1', anchor='nw')
+		# canvas.create_text(80, 150, text='* Upload:', font='Baloo 30', fill='MediumPurple1', anchor='nw')
+		# back button
 		canvas.create_rectangle(self.lx1, self.ly1, self.lx2, self.ly2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.lx1+self.lx2)/2, (self.ly1+self.ly2)/2, text='Back', font='Baloo 28', fill='steel blue')
-		canvas.create_rectangle(self.rx3, self.ry3, self.rx4, self.ry4, fill='lavender', width=8, outline='steel blue')
-		canvas.create_text((self.rx3+self.rx4)/2, (self.ry3+self.ry4)/2, text='Save', font='Baloo 28', fill='steel blue')
 
 	def drawDrawPage(self, canvas):
 		canvas.create_rectangle(0, 0, self.width, self.height, fill='SkyBlue1')
@@ -974,6 +1098,7 @@ class MyApp(App):
 		canvas.create_rectangle(self.dpx13, self.dpy13, self.dpx14, self.dpy14, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.dpx13+self.dpx14)/2, (self.dpy13+self.dpy14)/2, text='Output', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.dpx13-100, self.dpy14+20, self.dpx14+5, self.dpy14+25, fill='lavender', width=0)
+		canvas.create_oval(self.clearx1, self.cleary1, self.clearx2, self.cleary2, fill='red', width=0)
 
 		# for adjusting drawing lines
 		if not self.drawMove:
