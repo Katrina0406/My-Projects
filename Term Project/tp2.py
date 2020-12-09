@@ -13,7 +13,7 @@ class MyApp(App):
 		self.height = 800
 		self.cameraOn = False
 		self.splash = True
-		self.dash = False
+		self.help = False
 
 		MyApp.drawParas(self)
 		MyApp.buttonParas(self)
@@ -47,8 +47,6 @@ class MyApp(App):
 		self.scrollX = (595+685)/2
 		self.scrollY = self.height-43
 		self.bgColor = 'lavender'
-		self.erase = False
-		self.erases = set()
 		self.eraseR = 5
 		self.retrieve = False
 		# buttons
@@ -181,9 +179,9 @@ class MyApp(App):
 					x1, y1 = line[j]
 					if ((self.tempx0+5) <= x1 <= (self.tempx1-5)
 							and (self.tempy0+5) <= y1 <= (self.tempy1-5)):
-						x1 = (x1-cx)*math.cos(angle) - (y1-cy)*math.sin(angle) + cx
-						y1 = (x1-cx)*math.sin(angle) + (y1-cy)*math.cos(angle) + cy
-						self.drawLine[i][j] = (x1, y1)
+						x = (x1-cx)*math.cos(angle) - (y1-cy)*math.sin(angle) + cx
+						y = (x1-cx)*math.sin(angle) + (y1-cy)*math.cos(angle) + cy
+						self.drawLine[i][j] = (x, y)
 
 	def findGraphRange(self):
 		minLeft, maxRight, minTop, maxBottom = self.tempx1, self.tempx0, self.tempy1, self.tempy0
@@ -378,10 +376,10 @@ class MyApp(App):
 					self.probX = (self.resizeX+disX) / disX
 			else:
 				if event.key == 'Left':
-					self.angle = 10
+					self.angle = -10
 					MyApp.rotateSnap(self)
 				elif event.key == 'Right':
-					self.angle = -10
+					self.angle = 10
 					MyApp.rotateSnap(self)
 		elif self.retrieve:
 			if event.key == 'Up' and self.eraseR <= 20:
@@ -390,22 +388,24 @@ class MyApp(App):
 				self.eraseR -= 3
 		elif self.rotateLine:
 			if event.key == 'Left':
-				self.roAngle = 10
+				self.roAngle = -10
 				MyApp.rotateDrawLines(self)
 			elif event.key == 'Right':
-				self.roAngle = -10
+				self.roAngle = 10
 				MyApp.rotateDrawLines(self)
 
 	def mouseDragged(self, event):
 		if self.draw:
-			MyApp.drawPen(self, event.x, event.y)
-			MyApp.penSize(self, event.x, event.y)
-			MyApp.eraseSnap(self, event.x, event.y)
-			MyApp.moveSnap(self, event.x, event.y)
-			MyApp.resizeSnap(self, event.x, event.y)
-			MyApp.findTempFrame(self, event.x, event.y)
-			MyApp.moveDrawLines(self, event.x, event.y)
-			MyApp.resizeDrawLines(self, event.x, event.y)
+			try:
+				MyApp.drawPen(self, event.x, event.y)
+				MyApp.penSize(self, event.x, event.y)
+				MyApp.moveSnap(self, event.x, event.y)
+				MyApp.resizeSnap(self, event.x, event.y)
+				MyApp.findTempFrame(self, event.x, event.y)
+				MyApp.moveDrawLines(self, event.x, event.y)
+				MyApp.resizeDrawLines(self, event.x, event.y)
+			except:
+				return
 		elif self.cameraOn:
 			MyApp.adjustSnap(self, event.x, event.y)
 
@@ -446,7 +446,7 @@ class MyApp(App):
 	def drawPen(self, x, y):
 		if not (self.drx1+8) <= x <= (self.drx2-8): return
 		if not (self.dry1+8) <= y <= (self.dry2-8): return
-		if (self.moveMode or self.resizeMode or self.erase or self.rotateMode or self.drawMove or self.drawResize or self.drawRotate or self.drawFlipH or self.drawFlipV or self.outputMode):
+		if (self.moveMode or self.resizeMode or self.rotateMode or self.drawMove or self.drawResize or self.drawRotate or self.drawFlipH or self.drawFlipV or self.outputMode):
 			return
 		# fill up all the gaps between the last dot and the current dot
 		if self.drawLine[self.trackLine] != []:
@@ -482,19 +482,10 @@ class MyApp(App):
 		result = ImageGrabber.grab((x0+rW,y0+40+rH,self.width*2-rW, self.height*2.1+20-rH))
 		return result
 
-	def eraseSnap(self, x, y):
-		if not self.erase: return
-		self.erases.add((x, y))
-		for i in range(1, len(self.contours)):
-			for cordi in self.contours[i]:
-				if (cordi == [[x, y]]).all():
-					self.contours[i] = np.delete(self.contours[i], [[x, y]])
-
 	def rotateSnap(self):
 		if not self.rotateMode: return
 		if self.contours == None: return
-		xL, xR, yT, yB = MyApp.findSnapRange(self)
-		cx, cy = (xL+xR)/2, (yT+yB)/2
+		cx, cy = (self.xL+self.xR)/2, (self.yT+self.yB)/2
 		# xnew = (x1 - cx)*cos(θ) - (y1 - cy)*sin(θ) + cx
 		# ynew = (x1 - cx)*sin(θ) + (y1 - cy)*cos(θ) + cy
 		angle = (self.angle/180)*math.pi
@@ -503,16 +494,18 @@ class MyApp(App):
 			for j in range(0, len(cont)):
 				cordi = cont[j]
 				x, y = cordi[0][0], cordi[0][1]
-				x = (x-cx)*math.cos(angle) - (y-cy)*math.sin(angle) + cx 
-				y = (x-cx)*math.sin(angle) + (y-cy)*math.cos(angle) + cy
-				self.contours[i][j][0] = (x, y)
+				x1 = (x-cx)*math.cos(angle) - (y-cy)*math.sin(angle) + cx 
+				y1 = (x-cx)*math.sin(angle) + (y-cy)*math.cos(angle) + cy
+				self.contours[i][j][0] = (x1, y1)
 
 	def resizeSnap(self, x, y):
 		if not self.resizeMode: return
+		if self.contours == None: return
 		if not self.drx1 <= x <= self.drx2: return
 		if not self.dry1 <= y <= self.dry2: return
 		cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
 		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
+		disX, disY = (x4-x3)/2, (y4-y3)/2
 		# four corners
 		if (x3-50) <= x <= (x3+50) and (y3-50) <= y <= (y3+50):
 			moveX = (x3 - x)
@@ -589,8 +582,7 @@ class MyApp(App):
 						y = y + (cy-y)*2
 				x1, x2 = x-2*self.probX, x+2*self.probX
 				y1, y2 = y-2*self.probY, y+2*self.probY
-				if (x, y) not in self.erases:
-					canvas.create_oval(x1, y1, x2, y2, fill=self.contourColor, width=0)
+				canvas.create_oval(x1, y1, x2, y2, fill=self.contourColor, width=0)
 		
 		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
 		if self.moveMode:
@@ -626,7 +618,6 @@ class MyApp(App):
 				if y < yT: yT = y
 				if y > yB: yB = y
 		self.xL, self.yT, self.xR, self.yB = xL-10, yT-10, xR+10, yB+10
-		return xL, xR, yT, yB
 
 	def mousePressed(self, event):
 		if self.splash:
@@ -641,12 +632,12 @@ class MyApp(App):
 					self.dash = True
 			# edit page
 			elif self.bx5 <= event.x <= self.bx6 and self.by5 <= event.y <= self.by6:
-				self.dash = True
-				self.splash = False
-			# draw page
-			elif self.bx7 <= event.x <= self.bx8 and self.by7 <= event.y <= self.by8:
 				self.splash = False
 				self.draw = True
+			# draw page
+			elif self.bx7 <= event.x <= self.bx8 and self.by7 <= event.y <= self.by8:
+				self.help = True
+				self.splash = False
 		elif self.cameraOn:
 			# camera back
 			if self.lx1 <= event.x <= self.lx2 and self.ly1 <= event.y <= self.ly2:
@@ -667,14 +658,10 @@ class MyApp(App):
 				self.cameraOn = False
 				self.draw = True
 				MyApp.findSnapRange(self)
-		elif self.dash:
-			# edit back
+		elif self.help:
 			if self.lx1 <= event.x <= self.lx2 and self.ly1 <= event.y <= self.ly2:
-				self.dash = False
+				self.help = False
 				self.splash = True
-				MyApp.checkSave(self)
-			elif self.rx3 <= event.x <= self.rx4 and self.ry3 <= event.y <= self.ry4:
-				self.saveMessage = True
 		elif self.draw:
 			# create a new line list
 			if ((self.drx1+8) <= event.x <= (self.drx2-8) and (self.dry1+8) <= event.y <= (self.dry2-8)):
@@ -725,9 +712,7 @@ class MyApp(App):
 			# draw save
 			elif self.rx3 <= event.x <= self.rx4 and self.ry3 <= event.y <= self.ry4:
 				self.saveDraw = True
-			elif (720 <= event.x <= 750 and self.height-30 <= event.y <= self.height-20): 
-				self.erase = not self.erase
-			elif (720 <= event.x <= 750 and self.height-70 <= event.y <= self.height-60): 
+			elif (720 <= event.x <= 760 and self.height-60 <= event.y <= self.height-40): 
 				self.retrieve = not self.retrieve
 			elif (self.dpx1 <= event.x <= self.dpx2 and self.dpy1 <= event.y <= self.dpy2):
 				self.moveMode = not self.moveMode
@@ -735,6 +720,7 @@ class MyApp(App):
 				self.resizeMode = not self.resizeMode
 			elif (self.dpx5 <= event.x <= self.dpx6 and self.dpy5 <= event.y <= self.dpy6):
 				self.rotateMode = not self.rotateMode
+				self.angle = 0
 			elif (self.dpx7 <= event.x <= self.dpx8 and self.dpy7 <= event.y <= self.dpy8):
 				self.flipH = not self.flipH
 			elif (self.dpx9 <= event.x <= self.dpx10 and self.dpy9 <= event.y <= self.dpy10):
@@ -791,6 +777,7 @@ class MyApp(App):
 
 	def moveSnap(self, x, y):
 		if not self.moveMode: return
+		if self.contours ==  None: return
 		cx, cy = (self.xL+self.xR)/2, (self.yT+self.yB)/2
 		if (self.xL-20) <= x <= (self.xR+20):
 			leftside = self.xL+10+(x-cx)
@@ -921,9 +908,9 @@ class MyApp(App):
 		canvas.create_rectangle(self.bx3, self.by3, self.bx4, self.by4, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.bx3+self.bx4)/2, (self.by4+self.by3)/2, text='Upload', font='Baloo 38', fill='steel blue')
 		canvas.create_rectangle(self.bx5, self.by5, self.bx6, self.by6, fill='lavender', width=8, outline='steel blue')
-		canvas.create_text((self.bx5+self.bx6)/2, (self.by5+self.by6)/2, text='Edit', font='Baloo 38', fill='steel blue')
+		canvas.create_text((self.bx5+self.bx6)/2, (self.by5+self.by6)/2, text='Draw', font='Baloo 38', fill='steel blue')
 		canvas.create_rectangle(self.bx7, self.by7, self.bx8, self.by8, fill='lavender', width=8, outline='steel blue')
-		canvas.create_text((self.bx7+self.bx8)/2, (self.by7+self.by8)/2, text='Draw', font='Baloo 38', fill='steel blue')
+		canvas.create_text((self.bx7+self.bx8)/2, (self.by7+self.by8)/2, text='Help', font='Baloo 38', fill='steel blue')
 
 	def drawCameraPage(self, canvas):
 		canvas.create_rectangle(0, 0, self.width, self.marginH, fill='SkyBlue1', width=0)
@@ -943,7 +930,7 @@ class MyApp(App):
 		canvas.create_rectangle(self.mx1, self.my1, self.mx2, self.my2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.mx1+self.mx2)/2, (self.ry3+self.ry4)/2, text='OK', font='Baloo 28', fill='steel blue')
 
-	def drawDashboard(self, canvas):
+	def drawHelpboard(self, canvas):
 		# canvas.create_image(0, 0, anchor = NW, image = img)
 		canvas.create_rectangle(0, 0, self.width, self.height, fill='SkyBlue1')
 		canvas.create_rectangle(self.tx1, self.ty1, self.tx2, self.ty2, fill='lavender', width=8, outline='steel blue')
@@ -952,7 +939,6 @@ class MyApp(App):
 		canvas.create_text((self.lx1+self.lx2)/2, (self.ly1+self.ly2)/2, text='Back', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.rx3, self.ry3, self.rx4, self.ry4, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.rx3+self.rx4)/2, (self.ry3+self.ry4)/2, text='Save', font='Baloo 28', fill='steel blue')
-		MyApp.drawText(self)
 
 	def drawDrawPage(self, canvas):
 		canvas.create_rectangle(0, 0, self.width, self.height, fill='SkyBlue1')
@@ -1019,14 +1005,49 @@ class MyApp(App):
 		if self.outputMode:
 			canvas.create_oval(self.dpx13-85, self.dpy13+5, self.dpx14-155, self.dpy14-5, fill='steel blue', width=5, outline='yellow2')
 
-		if self.erase:
-			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color2, width=0)
-		if not self.erase:
-			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color1, width=0)
 		if self.retrieve:
-			canvas.create_rectangle(720, self.height-70, 750, self.height-60, fill=color2, width=0)
+			canvas.create_rectangle(720, self.height-60, 760, self.height-40, fill=color2, width=2, outline='gray3')
 		if not self.retrieve:
-			canvas.create_rectangle(720, self.height-70, 750, self.height-60, fill=color1, width=0)
+			canvas.create_rectangle(720, self.height-60, 760, self.height-40, fill=color1, width=2, outline='gray3')
+
+		# draw top instructions
+		if self.moveMode:
+			canvas.create_text(50, 32, text='Drag or press direction keys to move your contour.', font='Baloo 32', fill='yellow2', anchor='nw')
+		elif self.resizeMode:
+			canvas.create_text(50, 22, text='Drag or press direction keys to resize your contour.', font='Baloo 28', fill='yellow2', anchor='nw')
+			canvas.create_text(50, 52, text='Press "+" to scale up and "=" to scale down:)', font='Baloo 28', fill='yellow2', anchor='nw')
+		elif self.rotateMode:
+			canvas.create_text(50, 32, text='Press direction keys:', font='Baloo 32', fill='yellow2', anchor='nw')
+			canvas.create_text(400, 22, text='"<–-":  counterclockwise', font='Baloo 28', fill='yellow2', anchor='nw')
+			canvas.create_text(400, 52, text='"–->":  clockwise', font='Baloo 28', fill='yellow2', anchor='nw')
+		elif self.flipH:
+			canvas.create_text(50, 32, text='Click "FlipH" to flip your contour horizontally.', font='Baloo 32', fill='yellow2', anchor='nw')
+		elif self.flipV:
+			canvas.create_text(50, 32, text='Click "FlipV" to flip your contour vertically.', font='Baloo 32', fill='yellow2', anchor='nw')
+		elif self.bgMode:
+			canvas.create_text(50, 32, text='Click color blocks to change your background color', font='Baloo 32', fill='yellow2', anchor='nw')
+		# circles
+		elif self.drawMove:
+			canvas.create_text(50, 22, text='Select the part of drawing you want to move.', font='Baloo 28', fill='yellow2', anchor='nw')
+			canvas.create_text(50, 52, text='Drag within the green frame to move your drawing.', font='Baloo 28', fill='yellow2', anchor='nw')
+		elif self.drawResize:
+			canvas.create_text(50, 22, text='Select the part of drawing you want to resize.', font='Baloo 28', fill='yellow2', anchor='nw')
+			canvas.create_text(50, 52, text='Drag the green frame to resize your drawing.', font='Baloo 28', fill='yellow2', anchor='nw')
+		elif self.drawRotate:
+			canvas.create_text(50, 22, text='Select the part of drawing you want to rotate.', font='Baloo 28', fill='yellow2', anchor='nw')
+			canvas.create_text(50, 52, text='Press "-->" :  clockwise;    "<--":  counterclockwise.', font='Baloo 28', fill='yellow2', anchor='nw')
+		elif self.drawFlipH:
+			canvas.create_text(50, 22, text='Select the part of drawing you want to flip.', font='Baloo 28', fill='yellow2', anchor='nw')
+			canvas.create_text(50, 52, text='Click on the board to flip horizontally.', font='Baloo 28', fill='yellow2', anchor='nw')
+		elif self.drawFlipV:
+			canvas.create_text(50, 22, text='Select the part of drawing you want to flip.', font='Baloo 28', fill='yellow2', anchor='nw')
+			canvas.create_text(50, 52, text='Click on the board to flip vertically.', font='Baloo 28', fill='yellow2', anchor='nw')
+		elif self.contourMode:
+			canvas.create_text(50, 32, text="Click color blocks to change your contour's color", font='Baloo 32', fill='yellow2', anchor='nw')
+		elif self.outputMode:
+			canvas.create_text(50, 32, text='Click "Output" to save your drawing on your computer.', font='Baloo 32', fill='yellow2', anchor='nw')
+		elif self.retrieve:
+			canvas.create_text(40, 32, text='Press "Up" to increase eraser size or "Down" to decrease.', font='Baloo 32', fill='yellow2', anchor='nw')
 
 	def drawAllLines(self, canvas):
 		i = 0
@@ -1042,8 +1063,8 @@ class MyApp(App):
 			MyApp.drawSplashPage(self, canvas)
 		elif self.cameraOn:
 			MyApp.drawCameraPage(self, canvas)
-		elif self.dash:
-			MyApp.drawDashboard(self, canvas)
+		elif self.help:
+			MyApp.drawHelpboard(self, canvas)
 		elif self.draw:
 			MyApp.drawDrawPage(self, canvas)
 			MyApp.drawSnap(self, canvas)
