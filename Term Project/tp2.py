@@ -46,7 +46,7 @@ class MyApp(App):
 		self.saveDraw = False
 		self.scrollX = (595+685)/2
 		self.scrollY = self.height-43
-		self.bgcolor = 'lavender'
+		self.bgColor = 'lavender'
 		self.erase = False
 		self.erases = set()
 		self.eraseR = 5
@@ -62,6 +62,10 @@ class MyApp(App):
 		self.angle = 0
 		self.flipH = False
 		self.flipV = False
+		self.bgMode = False
+		self.contourMode = False
+		self.contourColor = 'black'
+		self.outputMode = False
 
 		# draw modes
 		self.drawMove = False
@@ -180,10 +184,6 @@ class MyApp(App):
 						x1 = (x1-cx)*math.cos(angle) - (y1-cy)*math.sin(angle) + cx
 						y1 = (x1-cx)*math.sin(angle) + (y1-cy)*math.cos(angle) + cy
 						self.drawLine[i][j] = (x1, y1)
-		self.tempx0 = (self.tempx0-cx)*math.cos(angle) - (self.tempy0-cy)*math.sin(angle) + cx
-		self.tempy0 = (self.tempx0-cx)*math.sin(angle) + (self.tempy0-cy)*math.cos(angle) + cy
-		self.tempx1 = (self.tempx1-cx)*math.cos(angle) - (self.tempy1-cy)*math.sin(angle) + cx
-		self.tempy1 = (self.tempx1-cx)*math.sin(angle) + (self.tempy1-cy)*math.cos(angle) + cy
 
 	def findGraphRange(self):
 		minLeft, maxRight, minTop, maxBottom = self.tempx1, self.tempx0, self.tempy1, self.tempy0
@@ -337,10 +337,9 @@ class MyApp(App):
 	def keyPressed(self, event):
 		if event.key == 'q':
 			self.quit()
-		elif event.key == 'a':
-			self.getSnapshot()
-		elif event.key == 's':
-			self.saveSnapshot()
+		elif self.bgMode:
+			if event.key == 'r':
+				self.bgColor = 'lavender'
 		elif self.moveMode or self.resizeMode or self.rotateMode:
 			cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
 			x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
@@ -379,9 +378,11 @@ class MyApp(App):
 					self.probX = (self.resizeX+disX) / disX
 			else:
 				if event.key == 'Left':
-					self.angle -= 10
+					self.angle = 10
+					MyApp.rotateSnap(self)
 				elif event.key == 'Right':
-					self.angle += 10
+					self.angle = -10
+					MyApp.rotateSnap(self)
 		elif self.retrieve:
 			if event.key == 'Up' and self.eraseR <= 20:
 				self.eraseR += 3
@@ -389,9 +390,11 @@ class MyApp(App):
 				self.eraseR -= 3
 		elif self.rotateLine:
 			if event.key == 'Left':
-				self.roAngle -= 10
+				self.roAngle = 10
+				MyApp.rotateDrawLines(self)
 			elif event.key == 'Right':
-				self.roAngle += 10
+				self.roAngle = -10
+				MyApp.rotateDrawLines(self)
 
 	def mouseDragged(self, event):
 		if self.draw:
@@ -443,8 +446,7 @@ class MyApp(App):
 	def drawPen(self, x, y):
 		if not (self.drx1+8) <= x <= (self.drx2-8): return
 		if not (self.dry1+8) <= y <= (self.dry2-8): return
-		if (self.moveMode or self.resizeMode or self.erase or self.rotateMode or self.drawMove
-			or self.drawResize or self.drawRotate or self.drawFlipH or self.drawFlipV):
+		if (self.moveMode or self.resizeMode or self.erase or self.rotateMode or self.drawMove or self.drawResize or self.drawRotate or self.drawFlipH or self.drawFlipV or self.outputMode):
 			return
 		# fill up all the gaps between the last dot and the current dot
 		if self.drawLine[self.trackLine] != []:
@@ -456,7 +458,7 @@ class MyApp(App):
 				self.drawLine[self.trackLine].append((xi, yi))
 				xi, yi = xi+xr, yi+yr
 				if self.retrieve:
-					self.pencolors.append(self.bgcolor)
+					self.pencolors.append(self.bgColor)
 					self.pensizes.append(self.eraseR)
 				else:
 					self.pencolors.append(self.drColor)
@@ -468,8 +470,8 @@ class MyApp(App):
 		if self.cameraOn:
 			self.cameraFired()
 
-	# cited from http://www.cs.cmu.edu/~112/index.html
-	def getSnapshot(self):
+	# modified from http://www.cs.cmu.edu/~112/index.html
+	def getSnapshot2(self):
 		if self.camFixed:
 			rW, rH = self.marginW*2+20, self.marginH*2.1
 		else:
@@ -488,22 +490,29 @@ class MyApp(App):
 				if (cordi == [[x, y]]).all():
 					self.contours[i] = np.delete(self.contours[i], [[x, y]])
 
+	def rotateSnap(self):
+		if not self.rotateMode: return
+		if self.contours == None: return
+		xL, xR, yT, yB = MyApp.findSnapRange(self)
+		cx, cy = (xL+xR)/2, (yT+yB)/2
+		# xnew = (x1 - cx)*cos(θ) - (y1 - cy)*sin(θ) + cx
+		# ynew = (x1 - cx)*sin(θ) + (y1 - cy)*cos(θ) + cy
+		angle = (self.angle/180)*math.pi
+		for i in range(1, len(self.contours)):
+			cont = self.contours[i]
+			for j in range(0, len(cont)):
+				cordi = cont[j]
+				x, y = cordi[0][0], cordi[0][1]
+				x = (x-cx)*math.cos(angle) - (y-cy)*math.sin(angle) + cx 
+				y = (x-cx)*math.sin(angle) + (y-cy)*math.cos(angle) + cy
+				self.contours[i][j][0] = (x, y)
+
 	def resizeSnap(self, x, y):
 		if not self.resizeMode: return
 		if not self.drx1 <= x <= self.drx2: return
 		if not self.dry1 <= y <= self.dry2: return
 		cx, cy = (self.xL+self.xR)/2+self.disMoveX, (self.yT+self.yB)/2+self.disMoveY
 		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
-		disR = ((self.xR-self.xL)**2 + (self.yB-self.yT)**2)**0.5
-		theta3 = math.acos((x3-cx)/disR)
-		x3 = cx + disR * math.cos(theta3+self.angle*math.pi/180)
-		theta4 = math.acos((x4-cx)/disR)
-		x4 = cx + disR * math.cos(theta4+self.angle*math.pi/180)
-		theta5 = math.asin((y3-cy)/disR)
-		y3 = cy + disR * math.sin(theta5+self.angle*math.pi/180)
-		theta6 = math.asin((y4-cy)/disR)
-		y4 = cy + disR * math.sin(theta6+self.angle*math.pi/180)
-		disX, disY = (x3+x4)/2, (y3+y4)/2
 		# four corners
 		if (x3-50) <= x <= (x3+50) and (y3-50) <= y <= (y3+50):
 			moveX = (x3 - x)
@@ -567,11 +576,7 @@ class MyApp(App):
 			for cordi in cont:
 				x, y = cordi[0][0]+(self.drx1+self.drx2)*0.24/2, cordi[0][1]+(self.dry1+self.dry2)*0.5/2
 				x = (x-cx)*self.probX+cx+self.disMoveX
-				theta = math.acos((x-cx)/disR)
-				x = cx + disR * math.cos(theta+self.angle*math.pi/180)
 				y = (y-cy)*self.probY+cy+self.disMoveY
-				theta2 = math.asin((y-cy)/disR)
-				y = cy + disR * math.sin(theta2+self.angle*math.pi/180)
 				if self.flipH:
 					if x > cx:
 						x = x - (x-cx)*2
@@ -585,17 +590,9 @@ class MyApp(App):
 				x1, x2 = x-2*self.probX, x+2*self.probX
 				y1, y2 = y-2*self.probY, y+2*self.probY
 				if (x, y) not in self.erases:
-					canvas.create_oval(x1, y1, x2, y2, fill='black', width=0)
+					canvas.create_oval(x1, y1, x2, y2, fill=self.contourColor, width=0)
 		
 		x3, y3, x4, y4 = (self.xL-cx)*self.probX+cx+self.disMoveX, (self.yT-cy)*self.probY+cy+self.disMoveY, (self.xR-cx)*self.probX+cx+self.disMoveX, (self.yB-cy)*self.probY+cy+self.disMoveY
-		theta3 = math.acos((x3-cx)/disR)
-		x3 = cx + disR * math.cos(theta3+self.angle*math.pi/180)
-		theta4 = math.acos((x4-cx)/disR)
-		x4 = cx + disR * math.cos(theta4+self.angle*math.pi/180)
-		theta5 = math.asin((y3-cy)/disR)
-		y3 = cy + disR * math.sin(theta5+self.angle*math.pi/180)
-		theta6 = math.asin((y4-cy)/disR)
-		y4 = cy + disR * math.sin(theta6+self.angle*math.pi/180)
 		if self.moveMode:
 			canvas.create_rectangle(x3, y3, x4, y4, outline='lightGreen', width=5)
 		elif self.resizeMode:
@@ -606,14 +603,16 @@ class MyApp(App):
 			canvas.create_oval(rx2-10, ry2-10, rx2+10, ry2+10, fill='lightGreen', width=0)
 			canvas.create_oval(rx3-10, ry3-10, rx3+10, ry3+10, fill='lightGreen', width=0)
 			canvas.create_oval(rx4-10, ry4-10, rx4+10, ry4+10, fill='lightGreen', width=0)
-		elif self.rotateMode:
-			canvas.create_rectangle(x3, y3, x4, y4, outline='MediumPurple2', width=5)
-			rx1, ry1, rx2, ry2 = x3, y3, x4, y3
-			rx3, ry3, rx4, ry4 = x3, y4, x4, y4
-			canvas.create_oval(rx1-10, ry1-10, rx1+10, ry1+10, fill='HotPink1', width=0)
-			canvas.create_oval(rx2-10, ry2-10, rx2+10, ry2+10, fill='HotPink1', width=0)
-			canvas.create_oval(rx3-10, ry3-10, rx3+10, ry3+10, fill='HotPink1', width=0)
-			canvas.create_oval(rx4-10, ry4-10, rx4+10, ry4+10, fill='HotPink1', width=0)
+
+	# modified from http://www.cs.cmu.edu/~112/index.html
+	def getSnapshot(self):
+		self._showRootWindow()
+		x0 = self._root.winfo_rootx() + self._canvas.winfo_x()
+		y0 = self._root.winfo_rooty() + self._canvas.winfo_y()
+		x1, y1 = x0+self.drx1+45, y0+self.dry1+155
+		x2, y2 = x0+self.drx2*2-10, y0+self.dry2*2+40
+		result = ImageGrabber.grab((x1, y1, x2, y2))
+		return result
 
 	def findSnapRange(self):
 		if self.contours == None: return
@@ -627,6 +626,7 @@ class MyApp(App):
 				if y < yT: yT = y
 				if y > yB: yB = y
 		self.xL, self.yT, self.xR, self.yB = xL-10, yT-10, xR+10, yB+10
+		return xL, xR, yT, yB
 
 	def mousePressed(self, event):
 		if self.splash:
@@ -656,12 +656,12 @@ class MyApp(App):
 			# fix scan pic
 			elif self.mx1 <= event.x <= self.mx2 and self.my1 <= event.y <= self.my2:
 				self.camFixed = True
-				self.snap = self.getSnapshot()
+				self.snap = self.getSnapshot2()
 				self.snap = self.scaleImage(self.snap, 0.5)
 			# snapshot convert
 			elif self.rx3 <= event.x <= self.rx4 and self.ry3 <= event.y <= self.ry4:
 				self.camFixed = False
-				self.snap = self.getSnapshot()
+				self.snap = self.getSnapshot2()
 				self.snap = self.scaleImage(self.snap, 0.5)
 				MyApp.dealSnap(self)
 				self.cameraOn = False
@@ -696,7 +696,6 @@ class MyApp(App):
 					self.findTemp = False
 				elif self.drawRotate and (not self.findTemp):
 					self.rotateLine = True
-					MyApp.rotateDrawLines(self)
 				# flipH
 				elif self.drawFlipH and self.findTemp:
 					self.tempx0, self.tempy0 = event.x, event.y
@@ -740,6 +739,12 @@ class MyApp(App):
 				self.flipH = not self.flipH
 			elif (self.dpx9 <= event.x <= self.dpx10 and self.dpy9 <= event.y <= self.dpy10):
 				self.flipV = not self.flipV
+			elif (self.dpx11 <= event.x <= self.dpx12 and self.dpy11 <= event.y <= self.dpy12):
+				self.bgMode = not self.bgMode
+				MyApp.drawColorCheck(self, event.x, event.y)
+			elif (self.dpx13 <= event.x <= self.dpx14 and self.dpy13 <= event.y <= self.dpy14):
+				if self.outputMode:
+					self.saveSnapshot()
 			# change drawing lines
 			elif (((event.x-(self.dpx1-80+self.dpx2-160)/2)**2 + (event.y-(self.dpy1+10+self.dpy2-10)/2)**2)**0.5 <= 40):
 				self.drawMove = not self.drawMove
@@ -769,6 +774,11 @@ class MyApp(App):
 				if not self.findTemp:
 					MyApp.changeTempParas(self)
 					self.flipVLine = False
+			elif (((event.x-(self.dpx11-80+self.dpx12-160)/2)**2 + (event.y-(self.dpy11+10+self.dpy12-10)/2)**2)**0.5 <= 40):
+				self.contourMode = not self.contourMode
+				MyApp.drawColorCheck(self, event.x, event.y)
+			elif (((event.x-(self.dpx13-80+self.dpx14-160)/2)**2 + (event.y-(self.dpy13+10+self.dpy14-10)/2)**2)**0.5 <= 40):
+				self.outputMode = not self.outputMode
 			else:
 				MyApp.drawColorCheck(self, event.x, event.y)
 				MyApp.resizeSnap(self, event.x, event.y)
@@ -795,59 +805,113 @@ class MyApp(App):
 
 	def drawColorCheck(self, x, y):
 		if self.cxF <= x <= self.cxF+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'firebrick1'
+			if self.bgMode: self.bgColor = 'firebrick1'
+			elif self.contourMode: self.contourColor = 'firebrick1'
+			else: self.drColor = 'firebrick1'
 		elif self.cxI <= x <= self.cxI+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'IndianRed1'
+			if self.bgMode: self.bgColor = 'IndianRed1'
+			elif self.contourMode: self.contourColor = 'IndianRed1'
+			else: self.drColor = 'IndianRed1'
 		elif self.cxS <= x <= self.cxS+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'salmon1'
+			if self.bgMode: self.bgColor = 'salmon1'
+			elif self.contourMode: self.contourColor = 'salmon1'
+			else: self.drColor = 'salmon1'
 		elif self.cxC <= x <= self.cxC+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'chocolate1'
+			if self.bgMode: self.bgColor = 'chocolate1'
+			elif self.contourMode: self.contourColor = 'chocolate1'
+			else: self.drColor = 'chocolate1'
 		elif self.cxOr <= x <= self.cxOr+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'orange'
+			if self.bgMode: self.bgColor = 'orange'
+			elif self.contourMode: self.contourColor = 'orange'
+			else: self.drColor = 'orange'
 		elif self.cxGo <= x <= self.cxGo+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'gold'
+			if self.bgMode: self.bgColor = 'gold'
+			elif self.contourMode: self.contourColor = 'gold'
+			else: self.drColor = 'gold'
 		elif self.cxY <= x <= self.cxY+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'yellow2'
+			if self.bgMode: self.bgColor = 'yellow2'
+			elif self.contourMode: self.contourColor = 'yellow2'
+			else: self.drColor = 'yellow2'
 		elif self.cxK <= x <= self.cxK+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'khaki1'
+			if self.bgMode: self.bgColor = 'khaki1'
+			elif self.contourMode: self.contourColor = 'khaki1'
+			else: self.drColor = 'khaki1'
 		elif self.cxA <= x <= self.cxA+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'antique white'
+			if self.bgMode: self.bgColor = 'antique white'
+			elif self.contourMode: self.contourColor = 'antique white'
+			else: self.drColor = 'antique white'
 		elif self.cxG <= x <= self.cxG+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'green2'
+			if self.bgMode: self.bgColor = 'green2'
+			elif self.contourMode: self.contourColor = 'green2'
+			else: self.drColor = 'green2'
 		elif self.cxSg <= x <= self.cxSg+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'spring green'
+			if self.bgMode: self.bgColor = 'spring green'
+			elif self.contourMode: self.contourColor = 'spring green'
+			else: self.drColor = 'spring green'
 		elif self.cxPg <= x <= self.cxPg+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'pale green'
+			if self.bgMode: self.bgColor = 'pale green'
+			elif self.contourMode: self.contourColor = 'pale green'
+			else: self.drColor = 'pale green'
 		elif self.cxSn <= x <= self.cxSn+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'snow'
+			if self.bgMode: self.bgColor = 'snow'
+			elif self.contourMode: self.contourColor = 'snow'
+			else: self.drColor = 'snow'
 		elif self.cxS <= x <= self.cxS+30 and self.cfl <= y <= self.cfl+30:
-			self.drColor = 'salmon1'
+			if self.bgMode: self.bgColor = 'salmon1'
+			elif self.contourMode: self.contourColor = 'salmon1'
+			else: self.drColor = 'salmon1'
 		elif self.cxAq <= x <= self.cxAq+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'aquamarine2'
+			if self.bgMode: self.bgColor = 'aquamarine2'
+			elif self.contourMode: self.contourColor = 'aquamarine2'
+			else: self.drColor = 'aquamarine2'
 		elif self.cxT <= x <= self.cxT+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'turquoise'
+			if self.bgMode: self.bgColor = 'turquoise'
+			elif self.contourMode: self.contourColor = 'turquoise'
+			else: self.drColor = 'turquoise'
 		elif self.cxDt <= x <= self.cxDt+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'dark turquoise'
+			if self.bgMode: self.bgColor = 'dark turquoise'
+			elif self.contourMode: self.contourColor = 'dark turquoise'
+			else: self.drColor = 'dark turquoise'
 		elif self.cxDs <= x <= self.cxDs+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'DeepSkyBlue2'
+			if self.bgMode: self.bgColor = 'DeepSkyBlue2'
+			elif self.contourMode: self.contourColor = 'DeepSkyBlue2'
+			else: self.drColor = 'DeepSkyBlue2'
 		elif self.cxDo <= x <= self.cxDo+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'DodgerBlue2'
+			if self.bgMode: self.bgColor = 'DodgerBlue2'
+			elif self.contourMode: self.contourColor = 'DodgerBlue2'
+			else: self.drColor = 'DodgerBlue2'
 		elif self.cxSb <= x <= self.cxSb+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'SlateBlue1'
+			if self.bgMode: self.bgColor = 'SlateBlue1'
+			elif self.contourMode: self.contourColor = 'SlateBlue1'
+			else: self.drColor = 'SlateBlue1'
 		elif self.cxMp <= x <= self.cxMp+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'MediumPurple1'
+			if self.bgMode: self.bgColor = 'MediumPurple1'
+			elif self.contourMode: self.contourColor = 'MediumPurple1'
+			else: self.drColor = 'MediumPurple1'
 		elif self.cxMo <= x <= self.cxMo+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'medium orchid'
+			if self.bgMode: self.bgColor = 'medium orchid'
+			elif self.contourMode: self.contourColor = 'medium orchid'
+			else: self.drColor = 'medium orchid'
 		elif self.cxHp <= x <= self.cxHp+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'HotPink1'
+			if self.bgMode: self.bgColor = 'HotPink1'
+			elif self.contourMode: self.contourColor = 'HotPink1'
+			else: self.drColor = 'HotPink1'
 		elif self.cxPv <= x <= self.cxPv+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'PaleVioletRed1'
+			if self.bgMode: self.bgColor = 'PaleVioletRed1'
+			elif self.contourMode: self.contourColor = 'PaleVioletRed1'
+			else: self.drColor = 'PaleVioletRed1'
 		elif self.cxOc <= x <= self.cxOc+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'orchid2'
+			if self.bgMode: self.bgColor = 'orchid2'
+			elif self.contourMode: self.contourColor = 'orchid2'
+			else: self.drColor = 'orchid2'
 		elif self.cxRb <= x <= self.cxRb+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'RosyBrown1'
+			if self.bgMode: self.bgColor = 'RosyBrown1'
+			elif self.contourMode: self.contourColor = 'RosyBrown1'
+			else: self.drColor = 'RosyBrown1'
 		elif self.cxB <= x <= self.cxB+30 and self.csl <= y <= self.csl+30:
-			self.drColor = 'black'
+			if self.bgMode: self.bgColor = 'black'
+			elif self.contourMode: self.contourColor = 'black'
+			else: self.drColor = 'black'
 
 	def drawSplashPage(self, canvas):
 		canvas.create_image(self.width/2, self.height/2, image=ImageTk.PhotoImage(self.img1))
@@ -892,7 +956,7 @@ class MyApp(App):
 
 	def drawDrawPage(self, canvas):
 		canvas.create_rectangle(0, 0, self.width, self.height, fill='SkyBlue1')
-		canvas.create_rectangle(self.drx1, self.dry1, self.drx2, self.dry2, fill='lavender', width=8, outline='steel blue')
+		canvas.create_rectangle(self.drx1, self.dry1, self.drx2, self.dry2, fill=self.bgColor, width=8, outline='steel blue')
 		# back button
 		canvas.create_rectangle(self.lx1, self.ly1, self.lx2, self.ly2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.lx1+self.lx2)/2, (self.ly1+self.ly2)/2, text='Back', font='Baloo 28', fill='steel blue')
@@ -908,7 +972,7 @@ class MyApp(App):
 		canvas.create_rectangle(self.scrollX-7, self.scrollY-7, self.scrollX+7, self.scrollY+7, fill='steel blue', width=3, outline='lavender')
 		color1, color2 = 'white', 'yellow2'
 		# buttons on the right side
-		canvas.create_rectangle(self.dpx1-40, self.dpy1-25, self.dpx14+5, self.dpy1-20, fill='lavender', width=0)
+		canvas.create_rectangle(self.dpx1-100, self.dpy1-25, self.dpx14+5, self.dpy1-20, fill='lavender', width=0)
 		canvas.create_rectangle(self.dpx1, self.dpy1, self.dpx2, self.dpy2, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.dpx1+self.dpx2)/2, (self.dpy1+self.dpy2)/2, text='Move', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.dpx3, self.dpy3, self.dpx4, self.dpy4, fill='lavender', width=8, outline='steel blue')
@@ -923,7 +987,7 @@ class MyApp(App):
 		canvas.create_text((self.dpx11+self.dpx12)/2, (self.dpy11+self.dpy12)/2, text='BGColor', font='Baloo 28', fill='steel blue')
 		canvas.create_rectangle(self.dpx13, self.dpy13, self.dpx14, self.dpy14, fill='lavender', width=8, outline='steel blue')
 		canvas.create_text((self.dpx13+self.dpx14)/2, (self.dpy13+self.dpy14)/2, text='Output', font='Baloo 28', fill='steel blue')
-		canvas.create_rectangle(self.dpx13-40, self.dpy14+20, self.dpx14+5, self.dpy14+25, fill='lavender', width=0)
+		canvas.create_rectangle(self.dpx13-100, self.dpy14+20, self.dpx14+5, self.dpy14+25, fill='lavender', width=0)
 
 		# for adjusting drawing lines
 		if not self.drawMove:
@@ -946,6 +1010,14 @@ class MyApp(App):
 			canvas.create_oval(self.dpx9-80, self.dpy9+10, self.dpx10-160, self.dpy10-10, fill='steel blue', width=0)
 		if self.drawFlipV:
 			canvas.create_oval(self.dpx9-85, self.dpy9+5, self.dpx10-155, self.dpy10-5, fill='steel blue', width=5, outline='yellow2')
+		if not self.contourMode:
+			canvas.create_oval(self.dpx11-80, self.dpy11+10, self.dpx12-160, self.dpy12-10, fill='lavender', width=0)
+		if self.contourMode:
+			canvas.create_oval(self.dpx11-85, self.dpy11+5, self.dpx12-155, self.dpy12-5, fill='lavender', width=5, outline='yellow2')
+		if not self.outputMode:
+			canvas.create_oval(self.dpx13-80, self.dpy13+10, self.dpx14-160, self.dpy14-10, fill='steel blue', width=0)
+		if self.outputMode:
+			canvas.create_oval(self.dpx13-85, self.dpy13+5, self.dpx14-155, self.dpy14-5, fill='steel blue', width=5, outline='yellow2')
 
 		if self.erase:
 			canvas.create_rectangle(720, self.height-30, 750, self.height-20, fill=color2, width=0)
