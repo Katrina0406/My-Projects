@@ -38,11 +38,10 @@ class MyApp(App):
 			self.text = readFile('draw.txt')
 		except:
 			return
-		# try:
-		# 	MyApp.getSaveInfo(self)
-		# except:
-		# 	return
-		MyApp.getSaveInfo(self)
+		try:
+			MyApp.getSaveInfo(self)
+		except:
+			return
 
 	def getSaveInfo(self):
 		# basically extract info from the saved file
@@ -94,39 +93,37 @@ class MyApp(App):
 			self.probX = float(info[7])
 			self.probY = float(info[8])
 
-			contours = info[9][8:-15]
+			tempContours = []
+			contours = info[9][7:-15]
 			contours = list(contours.split(", dtype=int32), array("))
-			n = 0
-			while n < len(contours):
-				cont = contours[0][1:-1].strip(" ")
+			while len(contours) > 0:
+				# [[[]]], [[[]]], ...
+				cont = contours[0][1:-1]
+				# [[]],[[]],...
 				k = 0
+				tempCor = []
 				while k < len(cont)-1:
 					if cont[k:k+2] == ']]':
 						# [[x1, y1]], [[x2, y2]]...
-						tempList = cont[1:k+1]
-						m = 0
-						tempCor = []
-						while m < len(tempList):
-							if tempList[m] == ']':
-								tempT = list(tempList[1:m].split(", "))
-								x = float(tempT[0])
-								y = float(tempT[1])
-								tempCor.append([(x, y)])
-								if m != len(tempList)-1:
-									tempList = tempList[m+3:]
-									m = 0
-								else:
-									break
-							else:
-								m += 1
-						self.contours.append(tempCor)
-						if k != len(contours)-2:
-							contours = contours[k+3:]
+						index = cont.find('[')
+						tempList = cont[index+1:k+1]
+						# [x, y]
+						tempT = list(tempList[1:-1].split(", "))
+						x = float(tempT[0])
+						y = float(tempT[1])
+						tempCor.append([[x, y]])
+						if k != len(cont)-2:
+							cont = cont[k+3:]
 							k = 0
 						else:
 							break
 					else:
 						k += 1
+				tempContours.append(tempCor)
+				contours = contours[1:]
+			self.contours = tempContours
+			print(self.contours)
+			MyApp.findSnapRange(self)
 
 	def saveDrawing(self):
 		if self.saveDraw:
