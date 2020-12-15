@@ -719,7 +719,7 @@ class MyApp(App):
 		x0 = self._root.winfo_rootx() + self._canvas.winfo_x()
 		y0 = self._root.winfo_rooty() + self._canvas.winfo_y()
 		x1, y1 = x0+self.drx1+45, y0+self.dry1+155
-		x2, y2 = x0+self.drx2*2-10, y0+self.dry2*2+40
+		x2, y2 = x0+self.drx2*2-10, y0+self.dry2*2+38
 		result = ImageGrabber.grab((x1, y1, x2, y2))
 		return result
 
