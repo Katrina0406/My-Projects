@@ -19,7 +19,7 @@ Run:
  * Also note that if you want to upload pics on your computer, you can put the pic within the Project folder and upload by typing in its name (e.g. sample.jpg)
 
 - Shortcut:
- * Press'q' to quit the program; Press "ctrl x" to force the program quit and enter again if you encountered errors.
+ * Press'q' to quit the program; Press "ctrl x" to force the program to quit and enter again if you encountered errors.
  * Click 'Upload' and enter 'sample', then click ok, click 'Draw' to see the sample contour (You can also see the original image named 'sample.jpg' in the folder).
  
 - Project Showcase Video:
