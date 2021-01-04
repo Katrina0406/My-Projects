@@ -1,2 +1,2 @@
 # 15112-Course-Project
-All 15112 group projects
+All 15112-related python projects
