@@ -1,8 +1,11 @@
 
 Yours Truly, Boba
 
-- Install NLTK first:
+- Install NLTK :
   https://www.nltk.org/install.html
+  
+- Install punkt:
+  Unzip 'punkt' package in the folder
 
 - Install text2emotion module: pip install text2emotion
 
