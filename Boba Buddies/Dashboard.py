@@ -18,7 +18,7 @@ def appStarted(app):
 
 def keyReleased(app, event):
     if app.writeDiary:
-        if (len(app.text)*9) % 540 < 8:
+        if (len(app.text)*8) % 520 < 10:
             app.text += '\n'
         if event.key == 'Space':
             app.text += ' '
