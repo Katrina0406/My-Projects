@@ -3,7 +3,7 @@
 Created by Yuqiao Hu and Yinan Wu
 '''
 
-# import from CMU lecture material
+# cited from http://www.cs.cmu.edu/~112/index.html
 from cmu_112_graphics import *
 import time
 
