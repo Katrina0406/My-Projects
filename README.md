@@ -1,2 +1,6 @@
-# 15112-Course-Project
-All 15112-related python projects
+# Coding Projects
+##Individual projects: 
+- Drawing Black Box
+##Collaborational projects:
+- Boba buddies
+- 
