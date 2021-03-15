@@ -1,7 +1,7 @@
-# Coding Projects
-## Individual projects: 
+## Coding Projects
+### Individual projects: 
 - Drawing Black Box
-## Collaborational projects:
+### Collaborational projects:
 - Boba Buddies
 - Gobang Game
 - Turtle Puzzles
