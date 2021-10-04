@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+</head>
+<body>
+    <form method="post" action="{% url 'runMsg' %}">
+        {% csrf_token %}  
+        <input type="text" name="corpid" placeholder="your corporation's id"><br>
+        <input type="text" name="corpsecret" placeholder="your corporation's secret"><br>
+        <input type="text" name="agentid" placeholder="your agent's id"><br>
+        <input type="text" name="userid" placeholder="your user id"><br>
+        <input type="text" name="content" placeholder="message"><br>
+        <input type="submit" value="提交"><br>
+    </form>
+</body>
+</html>
+

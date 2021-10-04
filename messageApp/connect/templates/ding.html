@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+</head>
+<body>
+    <form method="post" action="{% url 'sendDD' %}">
+        {% csrf_token %}  
+        <input type="text" name="secret" placeholder="your robot's secret"><br>
+        <input type="text" name="token" placeholder="your robot's access token"><br>
+        <input type="text" name="content" placeholder="message to send"><br>
+        <input type="text" name="user_mobiles" placeholder="users' mobiles to mention (split phone numbers with ',')"><br>
+        <select multiple name="isatall">
+            <option>True</option>
+            <option>False</option>
+        </select>
+        <input type="submit" value="提交"><br>
+    </form>
+</body>
+</html>
+
