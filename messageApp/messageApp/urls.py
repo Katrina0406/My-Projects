@@ -23,6 +23,6 @@ from connect import dingding
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('user/',views.logindb,name='logindb'),
-    path('reg/',wechat.runMsg,name='runMsg'),
+    path('index/',wechat.runMsg,name='runMsg'),
     path('ding/',dingding.sendDD,name='sendDD'),
 ]
