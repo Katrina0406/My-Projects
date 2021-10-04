@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+</head>
+<body>
+    <form method="post" action="{% url 'logindb' %}">
+        {% csrf_token %}  
+        <input type="text" name="username" placeholder="your username"><br>
+        <input type="password" name="password" placeholder="your password"><br>
+        <input type="submit" value="提交"><br>
+    </form>
+</body>
+</html>
+
