@@ -173,8 +173,8 @@ def to_num(df):
 
 if __name__ == '__main__':
 
-    df = pd.read_excel("钢材_清理.xlsx")
-    # df = pd.read_excel("铁矿石_改.xlsx")
+    df = pd.read_excel("steel_clean.xlsx")
+    # df = pd.read_excel("iron_ore.xlsx")
 
     # 将dataframe里面所有非float类型的数据转化成float类型
     df = to_num(df)
