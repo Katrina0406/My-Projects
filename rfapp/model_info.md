@@ -1,4 +1,4 @@
-# Random forest model
+# Random Forest model
 ——Applicable scenarios: small and medium data volume
 
 ## idea:
@@ -41,7 +41,7 @@ Support: the number of days of possible changes/cancellations in the original sa
     5. Adjust the parameters, the idea is to adjust each parameter independently (other parameters remain unchanged, 
     only one parameter range changes at a time, given a range for the computer to calculate the best parameter value).
     6. Overall thinking of parameters:
-    ##### Frame parameters:
+#### Frame parameters:
         (1) n_estimators (the largest number of weak learners):
     Generally speaking, if n_estimators is too small, it is easy to underfit. If n_estimators is too large, the amount of calculation will be too large, and after n_estimators reaches a certain number, 
     the model improvement obtained by increasing n_estimators will be small, so generally choose a moderate value. The default is 100.
@@ -51,7 +51,7 @@ Support: the number of days of possible changes/cancellations in the original sa
     The loss function of classification model and regression model is different. The CART classification tree corresponding to the classification RF defaults to the Gini coefficient gini, 
     and another optional criterion is the information gain. The CART regression tree corresponding to the regression RF defaults to the mean square error.
     
-### Decision tree parameters:
+#### Decision tree parameters:
         (1) max_features (the maximum number of features considered during RF division):
     Many types of values ​​can be used. The default is "auto", which means that at most √𝑁 features will be considered when dividing; 
     if it is "log2", it means that at most 𝑙𝑜𝑔2𝑁 features will be considered when dividing; 
