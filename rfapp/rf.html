@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+</head>
+<body>
+    <form method="post" action="{% url 'get_info_rf' %}">
+        {% csrf_token %}  
+        <input type="text" name="type" placeholder="品种"><br>
+        <input type="text" name="model_name" placeholder="输入模型名"><br>
+        <input type="text" name="time_step" placeholder="以多少天为单位训练"><br>
+        <input type="text" name="predict_step" placeholder="预测未来天数"><br>
+        <input type="text" name="excel_file" placeholder="excel_file"><br>
+        <input type="text" name="criterion" placeholder="criterion"><br>
+        <input type="text" name="max_depth" placeholder="max_depth"><br>
+        <input type="text" name="n_estimators" placeholder="n_estimators"><br>
+        <input type="text" name="max_features" placeholder="max_features"><br>
+        <input type="text" name="min_samples_split" placeholder="min_samples_split"><br>
+        <input type="text" name="random_state" placeholder="random_state"><br>
+        <input type="text" name="min_samples_leaf" placeholder="min_samples_leaf"><br>
+           <!-- 不使用表单提交文件
+        <div id="uploadForm">
+            <input id="excel_file" type="file"/>
+            <button id="train" type="button">upload_train</button>
+        </div>
+        <div id="uploadForm2">
+            <input id="excel_file2" type="file"/>
+            <button id="predict" type="button">upload_predict</button>
+        </div> -->
+        <input type="submit" value="提交"><br>
+    </form>
+
+</body>
+</html>
+
