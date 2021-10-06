@@ -1,0 +1,13 @@
+sma, wma, mom, futures_volume_rebar, average_daily_output_crude_steel, key_enterprise_output_crude_steel, steel_production, gdp, cpi, ppi, industry_electricity, pmi, m1, m2, investment, consumption, spot_price_equilateral_angle_steel
+品种：钢材
+特征重要性：
+{'sma': '5.18%', 'wma': '4.57%', 'mom': '24.39%', 'futures_volume_rebar': '5.19%', 'average_daily_output_crude_steel': '5.05%', 'key_enterprise_output_crude_steel': '5.0%', 'steel_production': '4.67%', 'gdp': '4.37%', 'cpi': '5.16%', 'ppi': '5.0%', 'industry_electricity': '4.14%', 'pmi': '5.05%', 'm1': '4.56%', 'm2': '3.82%', 'investment': '4.97%', 'consumption': '4.55%', 'spot_price_equilateral_angle_steel': '4.33%'}
+随机森林性能表：
+       精确率     召回率    f1分数  样本数
+下跌   81.5%  83.68%  82.58%  337
+上涨  83.63%  81.45%  82.53%  345
+精确度AUC：82.56%
+交叉验证得分：43.3%
+2021-08-20 18:18:14.638762
+{'class_weight': 'balanced', 'criterion': 'gini', 'max_depth': 20, 'max_features': 'auto', 'min_samples_leaf': 1, 'min_samples_split': 4, 'n_estimators': 130, 'random_state': 4}以20天为单位训练
+预测未来5天的趋势
