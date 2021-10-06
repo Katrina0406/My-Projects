@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+</head>
+<body>
+    <form method="post" action="{% url 'get_info_lstm' %}">
+        {% csrf_token %}  
+        <input type="text" name="comm_type" placeholder="输入品种"><br>
+        <input type="text" name="time_s" placeholder="以多少天为单位训练"><br>
+        <input type="text" name="predict_d" placeholder="预测未来天数"><br>
+        <input type="text" name="total_cols" placeholder="训练集总列数"><br>
+        <input type="text" name="model_name" placeholder="模型名称"><br>
+        <input type="text" name="lstm_layer" placeholder="堆叠层数"><br>
+        <input type="text" name="dropout_rate" placeholder="dropout概率"><br>
+        <input type="text" name="batch_size" placeholder="batch_size"><br>
+        <input type="text" name="learning_rate" placeholder="学习率"><br>
+        <input type="text" name="hidden_size" placeholder="隐藏层大小"><br>
+        <input type="text" name="epoch" placeholder="迭代次数"><br>
+        <input type="text" name="patience" placeholder="提升限制次数"><br>
+        <input type="text" name="train_data" placeholder="训练集名字"><br>
+        <input type="text" name="predict_data" placeholder="预测集名字"><br>
+        <select multiple name="do_train">
+            <option>True</option>
+            <option>False</option>
+        </select>
+        <input type="submit" value="提交"><br>
+    </form>
+</body>
+</html>
+
