@@ -10,7 +10,7 @@ accuracy = number of days predicted increase while is actually increase / all da
 recall = number of days predicted increase while is actually increase / all days actually increase
 #### F1-score
 f1-score: measure the rationality of the two-class model, balance rate and numerical rate
-= 2*precision*recall rate/(precision+recall rate)
+= 2 * precision * recall rate / (precision + recall rate)
 #### Support
 Support: the number of days of possible changes/cancellations in the original sample
 
