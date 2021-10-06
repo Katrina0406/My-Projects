@@ -1,21 +1,21 @@
-#Random forest model
+# Random forest model
 ——Applicable scenarios: small and medium data volume
 
-##idea:
+## idea:
 It is composed of many decision trees, and different decision trees are not related. result. Which of the classification results of the decision tree has the most classification, the probability of occurrence will appear this result.
 
-Accuracy: 
+### Accuracy: 
 accuracy = number of days predicted increase while is actually increase / all days predicted increase
 recall = number of days predicted increase while is actually increase / all days actually increase
 f1-score: measure the rationality of the two-class model, balance rate and numerical rate
 = 2*precision*recall rate/(precision+recall rate)
 Support: the number of days of possible changes/cancellations in the original sample
 
-Classification effect:
+### Classification effect:
 1. The greater the correlation between any two trees in the forest, the greater the error rate
 2. The stronger the classification ability of each tree in the forest, the lower the error rate of the entire forest
 
-##advantage:
+### advantage:
     1. High-dimensional data (multiple features) can be produced without dimensionality reduction or feature selection
     2. The importance of features can be judged
     3. Can judge the mutual influence between different characteristics
@@ -25,12 +25,12 @@ Classification effect:
     7. For unbalanced data sets, errors can be balanced
     8. If a large part of the features are missing, the accuracy can still be maintained
 
-##shortcoming:
+### shortcoming:
     1. Overfitting on some noisy classification or regression problems
     2. For data with attributes with different values, attributes with more value divisions will have a greater impact on the random forest, 
        so the attribute weights produced by the random forest on this kind of data are unreliable
        
-##data processing:
+### data processing:
     1. Delete indicators with too many missing values. Generally, the missing data in a column of data accounts for more than 20% of the total data and must be cleaned up, otherwise it will affect the accuracy of the model. 
     However, since many data are monthly, if you calculate by day, there will be only one day in a month, so you manually clean up such data columns. clean_columns is only applicable to clean up all data sets in days.
     2. Fill in missing values (the code has been written, the idea is to fill in with a linear function first to form a rough trend, and then use the data above/below it to fill in if there are missing values.
@@ -41,7 +41,7 @@ Classification effect:
     5. Adjust the parameters, the idea is to adjust each parameter independently (other parameters remain unchanged, 
     only one parameter range changes at a time, given a range for the computer to calculate the best parameter value).
     6. Overall thinking of parameters:
-    ###Frame parameters:
+    ##### Frame parameters:
         (1) n_estimators (the largest number of weak learners):
     Generally speaking, if n_estimators is too small, it is easy to underfit. If n_estimators is too large, the amount of calculation will be too large, and after n_estimators reaches a certain number, 
     the model improvement obtained by increasing n_estimators will be small, so generally choose a moderate value. The default is 100.
@@ -51,7 +51,7 @@ Classification effect:
     The loss function of classification model and regression model is different. The CART classification tree corresponding to the classification RF defaults to the Gini coefficient gini, 
     and another optional criterion is the information gain. The CART regression tree corresponding to the regression RF defaults to the mean square error.
     
-###Decision tree parameters:
+### Decision tree parameters:
         (1) max_features (the maximum number of features considered during RF division):
     Many types of values ​​can be used. The default is "auto", which means that at most √𝑁 features will be considered when dividing; 
     if it is "log2", it means that at most 𝑙𝑜𝑔2𝑁 features will be considered when dividing; 
@@ -93,30 +93,30 @@ Classification effect:
     This value limits the growth of the decision tree. If the impurity of a node (based on Gini coefficient, mean square error) is less than this threshold, 
     the node no longer generates child nodes. It is a leaf node. It is generally not recommended to change the default value 1e-7.
     
-#Neural network LSTM model
+# Neural network LSTM model
 ——Applicable scenario: large data volume
 
-##LSTM model introduction:
+## LSTM model introduction:
 Long short-term memory (Long short-term memory, LSTM) is a special kind of RNN, mainly to solve the problem of gradient disappearance and gradient explosion during long sequence training. LSTM is very suitable for dealing with problems that are highly related to time series, such as machine translation, dialog generation, encoding\decoding, etc.
 
-##LSTM_model file:
+### LSTM_model file:
      (1) The custom LSTM module is responsible for training the model and predicting the data trend, which is called in Tech_Coal_Classifier_temp
      (2) The python package used: pytorch, which provides an LSTM model and helps transform the data into a trainable structure
     
-##Tech_Coal_Classifier_temp file:
+### Tech_Coal_Classifier_temp file:
      (1) Assign values to the LSTM model in the Config class, and define various training parameters. The input data can be replaced by changing the path parameter.
      (2) Read and process the data in the Data class to obtain the trained data
      (3) The draw method can customize the graph of the training process
      (4) ROC method outputs prediction results
 
-##The new data set needs to be changed:
+### The new data set needs to be changed:
      1. The read_data() function should be changed to pd.read_csv or pd_read_excel according to the input file.
      2. The parameters need to be modified, and the range of columns cannot exceed the original value of the data set
      3. Missing values need to be processed, nan is not supported, so there must be data in all positions (processed in Data)
      4. The triple_class_accuracy() function for judging the rise or fall also needs to be modified according to the data, and the ROC function also needs to be modified according to the content of the data
      To change, 012 in the original example represents fall, shock, and rise respectively, so the data conversion of 012 is performed to output the result.
     
-##Parameter meaning:
+### Parameter meaning:
 1. Dropout: Most of the Dropout papers are set to 0.5. It is said that 0.5 works well and can prevent over-fitting problems. However, in different tasks, you need to adjust the size of the dropout appropriately, 
 and adjust the value of the dropout. In addition, the position of dropout in the model is also very important. You can try different dropout positions, and you may get amazing results.
 
