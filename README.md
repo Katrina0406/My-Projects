@@ -1,6 +1,6 @@
 ## Python Projects
 ### Individual projects: 
-#### rfapp
+###### rfapp
 - Deep learning LSTM model & Random Forest model
 - Aims to predict the upcoming trends for futures settement price
 #### messageApp
