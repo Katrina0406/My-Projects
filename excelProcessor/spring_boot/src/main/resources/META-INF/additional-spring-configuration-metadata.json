@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "mybatis.jdbc.jar",
+      "type": "java.lang.String",
+      "description": "Description for mybatis.jdbc.jar."
+    }
+  ] }

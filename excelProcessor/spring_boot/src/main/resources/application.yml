@@ -1,0 +1,16 @@
+server:
+  port: 80
+
+spring:
+  datasource:
+    name: virtual_control_db
+    url: jdbc:mysql://127.0.0.1:3306/mysql?serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true
+    username: root
+    password: 20020406
+    type: com.example.mybatisgen.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis:
+  jdbc:
+    jar: /Users/katrina/spring_boot/src/main/resources/mysql-connector-java-8.0.25.jar
+
