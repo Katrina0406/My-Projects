@@ -1,8 +1,8 @@
 ## Python Projects
 ### Individual projects: 
 ##### rfapp
-- Deep learning LSTM model & Random Forest model
-- Aims to predict the upcoming trends for futures settement price
+- deep learning LSTM model & Random Forest model
+- aims to predict the upcoming trends for futures settement price
 ##### excelProcessor
 - use easyexcel framework, program reads excels and imports to SQL database, can modify excels by a given excel template and output the modified documents
 ##### ARapp
@@ -11,8 +11,8 @@
 ##### messageApp
 - Aims to send massive/private notifications from webpage to Wechat Work or DingDing
 ##### Drawing Black Box
-- Supports scanning of drawing manuscripts and extracting the outlines
-- Can draw electronically, modify & transform outline, and save your work locally
+- supports scanning of drawing manuscripts and extracting the outlines
+- can draw electronically, modify & transform outline, and save your work locally
 ##### pdfConverter
 - extract table content from pdf files, output a dictionary txt, which can be converted and saved in mysql database
 ##### autoDownload
