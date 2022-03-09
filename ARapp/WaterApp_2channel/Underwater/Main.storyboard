@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="19162" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_1" orientation="landscape" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="19144"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="s0d-6b-0kx">
+            <objects>
+                <viewController id="Y6W-OH-hqX" customClass="ViewController" customModule="WaterApp" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="5EZ-qb-Rvc">
+                        <rect key="frame" x="0.0" y="0.0" width="896" height="414"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" id="R5t-Dk-VZI">
+                                <rect key="frame" x="0.0" y="0.0" width="896" height="414"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <subviews>
+                                    <stackView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="HDS-rL-vTR">
+                                        <rect key="frame" x="0.0" y="0.0" width="896" height="414"/>
+                                        <subviews>
+                                            <arView multipleTouchEnabled="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="xnj-kS-TEO" customClass="UnderwaterView" customModule="WaterApp">
+                                                <rect key="frame" x="0.0" y="0.0" width="448" height="414"/>
+                                            </arView>
+                                            <arView multipleTouchEnabled="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="f4R-Qp-OTe" customClass="UnderwaterView" customModule="WaterApp">
+                                                <rect key="frame" x="448" y="0.0" width="448" height="414"/>
+                                            </arView>
+                                        </subviews>
+                                        <constraints>
+                                            <constraint firstItem="f4R-Qp-OTe" firstAttribute="width" secondItem="xnj-kS-TEO" secondAttribute="width" id="Ez5-5y-AJR"/>
+                                            <constraint firstItem="f4R-Qp-OTe" firstAttribute="height" secondItem="xnj-kS-TEO" secondAttribute="height" id="QXm-oV-cel"/>
+                                        </constraints>
+                                    </stackView>
+                                </subviews>
+                                <viewLayoutGuide key="safeArea" id="pLp-1B-Gtb"/>
+                                <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                                <constraints>
+                                    <constraint firstItem="HDS-rL-vTR" firstAttribute="leading" secondItem="R5t-Dk-VZI" secondAttribute="leading" id="37Q-dz-o4v"/>
+                                    <constraint firstAttribute="trailing" secondItem="HDS-rL-vTR" secondAttribute="trailing" id="FqJ-4m-7ai"/>
+                                    <constraint firstItem="HDS-rL-vTR" firstAttribute="top" secondItem="pLp-1B-Gtb" secondAttribute="top" id="MsD-dz-yzL"/>
+                                    <constraint firstAttribute="bottom" secondItem="HDS-rL-vTR" secondAttribute="bottom" id="lYV-7s-gnl"/>
+                                </constraints>
+                                <connections>
+                                    <outlet property="sceneView1" destination="xnj-kS-TEO" id="3fZ-kQ-TdY"/>
+                                    <outlet property="sceneView2" destination="f4R-Qp-OTe" id="i3i-uF-eiy"/>
+                                </connections>
+                            </view>
+                            <stackView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="0OG-Br-gNm">
+                                <rect key="frame" x="0.0" y="0.0" width="896" height="414"/>
+                                <subviews>
+                                    <arView multipleTouchEnabled="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Usl-KQ-W2J" customClass="UnderwaterView" customModule="WaterApp">
+                                        <rect key="frame" x="0.0" y="0.0" width="448" height="414"/>
+                                    </arView>
+                                    <arView multipleTouchEnabled="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="gL3-LF-eFb" customClass="UnderwaterView" customModule="WaterApp">
+                                        <rect key="frame" x="448" y="0.0" width="448" height="414"/>
+                                    </arView>
+                                </subviews>
+                                <constraints>
+                                    <constraint firstItem="gL3-LF-eFb" firstAttribute="width" secondItem="Usl-KQ-W2J" secondAttribute="width" id="d1d-j0-ShB"/>
+                                    <constraint firstItem="gL3-LF-eFb" firstAttribute="height" secondItem="Usl-KQ-W2J" secondAttribute="height" id="zIj-wd-2oR"/>
+                                </constraints>
+                            </stackView>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="vDu-zF-Fre"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <constraints>
+                            <constraint firstAttribute="bottom" secondItem="0OG-Br-gNm" secondAttribute="bottom" id="4H2-MY-Hgi"/>
+                            <constraint firstAttribute="trailing" secondItem="0OG-Br-gNm" secondAttribute="trailing" id="JYf-hr-1T2"/>
+                            <constraint firstItem="0OG-Br-gNm" firstAttribute="top" secondItem="vDu-zF-Fre" secondAttribute="top" id="PKF-QW-fUC"/>
+                            <constraint firstItem="0OG-Br-gNm" firstAttribute="leading" secondItem="5EZ-qb-Rvc" secondAttribute="leading" id="aXy-Me-h58"/>
+                        </constraints>
+                        <connections>
+                            <outlet property="sceneView1" destination="Usl-KQ-W2J" id="LuE-ka-UJ5"/>
+                            <outlet property="sceneView2" destination="gL3-LF-eFb" id="Qxe-Hi-FLO"/>
+                        </connections>
+                    </view>
+                    <connections>
+                        <outlet property="sceneView1" destination="Usl-KQ-W2J" id="Qsf-gd-oKi"/>
+                        <outlet property="sceneView2" destination="gL3-LF-eFb" id="CZY-gp-awR"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="Ief-a0-LHa" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="19.419642857142858" y="52.173913043478265"/>
+        </scene>
+    </scenes>
+    <resources>
+        <systemColor name="systemBackgroundColor">
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
+    </resources>
+</document>
