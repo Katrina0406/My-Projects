@@ -5,7 +5,7 @@
 - aims to predict the upcoming trends for futures settement price
 ##### excelProcessor
 - use easyexcel framework, program reads excels and imports to SQL database, can modify excels by a given excel template and output the modified documents
-##### ARapp
+##### ARTrainingApp
 - automatic placement of scanned human model on floor
 - simulate emergency scenarios for medical teaching
 ##### messageApp
